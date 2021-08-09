@@ -86,7 +86,7 @@ void my_ls(char *name)
       return;
     }
     while ((dp = readdir(dfd)) != NULL) {
-      if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
+      if (dp->d_name[0] == '.' && !show_hidden_files)
         continue;
       if (strlen(dir)+strlen(dp->d_name)+2 > sizeof(name))
         fprintf(stderr, "my_ls: name %s/%s too long \n", dir, dp->d_name);
