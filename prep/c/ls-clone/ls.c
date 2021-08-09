@@ -36,20 +36,30 @@ int main(int argc, char **argv)
       }
     }
     else {
-      ++argc;
       --argv;
       break;
     }
+  ++argc;
 
   // print information for each directory
-  if (argc == 0) {
+  if (argc == 1) {
     my_ls(".");
   } else {
     if (argc > 2) {
       has_multiple_files = 1;
     }
-    while (--argc > 0)
-      my_ls(*++argv);
+    while (--argc > 0) {
+      ++argv;
+      if (has_multiple_files) {
+        printf("%s:\n", *argv);
+        my_ls(*argv);
+        if (argc > 1) {
+          printf("\n\n");
+        }
+      } else {
+        my_ls(*argv);
+      }
+    }
   }
   return 0;
 }
@@ -64,6 +74,7 @@ void my_ls(char *name)
     fprintf(stderr, "my_ls: can't access %s", name);
     return;
   }
+  // handle if it's a directory
   if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
     char *dir = name;
     char name[MAX_PATH];
@@ -85,6 +96,8 @@ void my_ls(char *name)
       }
     }
     closedir(dfd);
+  } else if ((stbuf.st_mode & S_IFMT) == S_IFREG) {
+    fprintf(stdout, "%s\t", name);
   }
   // printf("%8lld %s\n", stbuf.st_size, name);
 }
