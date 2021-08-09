@@ -27,16 +27,23 @@ int main(int argc, char **argv)
   // find all the flags
   while (--argc > 0)
     if ((*++argv)[0] == '-') {
-      printf("all flags: %s\n", ++(*argv));
-      // --(*argv);
-      // while ((*argv)++[0] != '\0') {
-      while (isalpha((*argv)[0])) {
-        printf("individual flag: %c %d\n", (*argv)[0], isalpha((*argv)[0]));
-        (*argv)++;
+      while (isalpha((++(*argv))[0])) {
+        switch((*argv)[0]) {
+          case 'a':
+            if (show_hidden_files == 0)
+              printf("showing hidden files\n");
+            show_hidden_files = 1;
+            break;
+          case 'l':
+            if (long_format == 0)
+              printf("using long format\n");
+            long_format = 1;
+            break;
+          default:
+            printf("unknown flag: %c\n", (*argv)[0]);
+            break;
+        }
       }
-      // while (++(*argv)) {
-        //   printf("%c\n", *argv[0]);
-        // }
     }
     else {
       ++argc;
