@@ -66,14 +66,12 @@ int main(int argc, char **argv)
 
 #define MAX_PATH 1024
 
+void print_target(char *);
+struct stat get_stat(char *);
+
 void my_ls(char *name)
 {
-  struct stat stbuf;
-
-  if (stat(name, &stbuf) == -1) {
-    fprintf(stderr, "my_ls: can't access %s", name);
-    return;
-  }
+  struct stat stbuf = get_stat(name);
   // handle if it's a directory
   if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
     char *dir = name;
@@ -91,8 +89,10 @@ void my_ls(char *name)
       if (strlen(dir)+strlen(dp->d_name)+2 > sizeof(name))
         fprintf(stderr, "my_ls: name %s/%s too long \n", dir, dp->d_name);
       else {
-        fprintf(stdout, "%s\t", dp->d_name);
+        // TODO: Fix the issue where we can't access things outside the current directory
         sprintf(name, "%s/%s", dir, dp->d_name);
+        print_target(name);
+        print_target(dp->d_name);
       }
     }
     closedir(dfd);
@@ -100,4 +100,37 @@ void my_ls(char *name)
     fprintf(stdout, "%s\t", name);
   }
   // printf("%8lld %s\n", stbuf.st_size, name);
+}
+
+struct stat get_stat(char *name) {
+  struct stat stbuf;
+  printf("getting stat for %s\n", name);
+
+  if (stat(name, &stbuf) == -1) {
+    fprintf(stderr, "my_ls: can't access %s\n", name);
+    return stbuf;
+  }
+  return stbuf;
+}
+
+void red() {
+  printf("\033[0;31m");
+}
+
+void blue() {
+  printf("\033[0;36m");
+}
+
+void reset() {
+  printf("\033[0m");
+}
+
+void print_target(char *name) {
+  struct stat stbuf = get_stat(name);
+  if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
+    blue();
+  }
+  // TODO: handle if executable
+  fprintf(stdout, "%s\t", name);
+  reset();
 }
