@@ -80,6 +80,10 @@ void my_ls(char *name)
     struct dirent *dp;
     DIR *dfd;
 
+    // store our directory entries
+    struct dirent *dirents = malloc(MAX_DIRS * sizeof(struct dirent));
+    int direntsIdx = 0;
+
     if ((dfd = opendir(dir)) == NULL) {
       fprintf(stderr, "my_ls: can't open %s\n", dir);
       return;
@@ -91,10 +95,18 @@ void my_ls(char *name)
       if (strlen(dir)+strlen(dp->d_name)+2 > sizeof(name))
         fprintf(stderr, "my_ls: name %s/%s too long \n", dir, dp->d_name);
       else {
-        sprintf(name, "%s/%s", dir, dp->d_name);
-        print_target(name, dp->d_name);
+        dirents[direntsIdx] = *dp;
+        direntsIdx++;
       }
     }
+    // loop through dirents array and print
+    int i;
+    for (i = 0; i < direntsIdx; i++) {
+      struct dirent d = dirents[i];
+      sprintf(name, "%s/%s", dir, d.d_name);
+      print_target(name, d.d_name);
+    }
+
     closedir(dfd);
   // handle if it's a file
   } else if ((stbuf.st_mode & S_IFMT) == S_IFREG) {
