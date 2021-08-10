@@ -65,6 +65,7 @@ int main(int argc, char **argv)
 }
 
 #define MAX_PATH 1024
+#define MAX_DIRS 10000
 
 void print_target(char *, char *);
 struct stat get_stat(char *);
@@ -84,6 +85,7 @@ void my_ls(char *name)
       return;
     }
     while ((dp = readdir(dfd)) != NULL) {
+      // TODO: while looping through these directories, I want to keep track of them in an array and then sort them by name before printing them
       if (dp->d_name[0] == '.' && !show_hidden_files)
         continue;
       if (strlen(dir)+strlen(dp->d_name)+2 > sizeof(name))
@@ -94,10 +96,10 @@ void my_ls(char *name)
       }
     }
     closedir(dfd);
+  // handle if it's a file
   } else if ((stbuf.st_mode & S_IFMT) == S_IFREG) {
     fprintf(stdout, "%s\t", name);
   }
-  // printf("%8lld %s\n", stbuf.st_size, name);
 }
 
 struct stat get_stat(char *name) {
