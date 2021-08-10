@@ -70,6 +70,10 @@ int main(int argc, char **argv)
 void print_target(char *, char *);
 struct stat get_stat(char *);
 
+int cmpfunc (const void * a, const void * b) {
+   return ( strcmp((*(struct dirent*)a).d_name,(*(struct dirent*)b).d_name));
+}
+
 void my_ls(char *name)
 {
   struct stat stbuf = get_stat(name);
@@ -89,16 +93,19 @@ void my_ls(char *name)
       return;
     }
     while ((dp = readdir(dfd)) != NULL) {
-      // TODO: while looping through these directories, I want to keep track of them in an array and then sort them by name before printing them
       if (dp->d_name[0] == '.' && !show_hidden_files)
         continue;
       if (strlen(dir)+strlen(dp->d_name)+2 > sizeof(name))
         fprintf(stderr, "my_ls: name %s/%s too long \n", dir, dp->d_name);
       else {
+        // store in our array of dirents
         dirents[direntsIdx] = *dp;
         direntsIdx++;
       }
     }
+
+    qsort(dirents, direntsIdx, sizeof(struct dirent), cmpfunc);
+
     // loop through dirents array and print
     int i;
     for (i = 0; i < direntsIdx; i++) {
