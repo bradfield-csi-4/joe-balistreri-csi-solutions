@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 
 #define MAX_PATH 1024
 
-void print_target(char *);
+void print_target(char *, char *);
 struct stat get_stat(char *);
 
 void my_ls(char *name)
@@ -89,10 +89,8 @@ void my_ls(char *name)
       if (strlen(dir)+strlen(dp->d_name)+2 > sizeof(name))
         fprintf(stderr, "my_ls: name %s/%s too long \n", dir, dp->d_name);
       else {
-        // TODO: Fix the issue where we can't access things outside the current directory
         sprintf(name, "%s/%s", dir, dp->d_name);
-        print_target(name);
-        print_target(dp->d_name);
+        print_target(name, dp->d_name);
       }
     }
     closedir(dfd);
@@ -104,8 +102,6 @@ void my_ls(char *name)
 
 struct stat get_stat(char *name) {
   struct stat stbuf;
-  printf("getting stat for %s\n", name);
-
   if (stat(name, &stbuf) == -1) {
     fprintf(stderr, "my_ls: can't access %s\n", name);
     return stbuf;
@@ -125,12 +121,14 @@ void reset() {
   printf("\033[0m");
 }
 
-void print_target(char *name) {
-  struct stat stbuf = get_stat(name);
+void print_target(char *fullPath, char *name) {
+  struct stat stbuf = get_stat(fullPath);
   if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
     blue();
+  } else if (stbuf.st_mode & S_IXUSR) {
+    red();
   }
-  // TODO: handle if executable
+  // TODO: could add colors for other file types e.g. https://axelilly.wordpress.com/2010/12/15/what-do-the-ls-colors-mean-in-bash/
   fprintf(stdout, "%s\t", name);
   reset();
 }
