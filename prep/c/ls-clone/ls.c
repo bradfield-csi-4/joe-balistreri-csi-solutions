@@ -7,57 +7,149 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <dirent.h>
 
-void fsize(char *);
+static int has_multiple_files = 0;
+static int show_hidden_files = 0;
+static int long_format = 0;
+
+void my_ls(char *);
 
 int main(int argc, char **argv)
 {
-  if (argc == 1)
-    fsize(".");
-  else
-    while (--argc > 0)
-      fsize(*++argv);
+  // find all the flags
+  while (--argc > 0)
+    if ((*++argv)[0] == '-') {
+      while (isalpha((++(*argv))[0])) {
+        switch((*argv)[0]) {
+          case 'a':
+            show_hidden_files = 1;
+            break;
+          case 'l':
+            long_format = 1;
+            break;
+          default:
+            printf("unknown flag: %c\n", (*argv)[0]);
+            break;
+        }
+      }
+    }
+    else {
+      --argv;
+      break;
+    }
+  ++argc;
+
+  // print information for each directory
+  if (argc == 1) {
+    my_ls(".");
+  } else {
+    if (argc > 2) {
+      has_multiple_files = 1;
+    }
+    while (--argc > 0) {
+      ++argv;
+      if (has_multiple_files) {
+        printf("%s:\n", *argv);
+        my_ls(*argv);
+        if (argc > 1) {
+          printf("\n\n");
+        }
+      } else {
+        my_ls(*argv);
+      }
+    }
+  }
   return 0;
 }
 
-void dirwalk(char *, void (*fcn)(char *));
+#define MAX_PATH 1024
+#define MAX_DIRS 10000
 
-void fsize(char *name)
-{
-  struct stat stbuf;
+void print_target(char *, char *);
+struct stat get_stat(char *);
 
-  if (stat(name, &stbuf) == -1) {
-    fprintf(stderr, "fsize: can't access %s", name);
-    return;
-  }
-  if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
-    dirwalk(name, fsize);
-  }
-  printf("%8lld %s\n", stbuf.st_size, name);
+int cmpfunc (const void * a, const void * b) {
+   return ( strcmp((*(struct dirent*)a).d_name,(*(struct dirent*)b).d_name));
 }
 
-#define MAX_PATH 1024
-
-void dirwalk(char *dir, void(*fcn)(char *))
+void my_ls(char *name)
 {
-  char name[MAX_PATH];
-  struct dirent *dp;
-  DIR *dfd;
+  struct stat stbuf = get_stat(name);
+  // handle if it's a directory
+  if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
+    char *dir = name;
+    char name[MAX_PATH];
+    struct dirent *dp;
+    DIR *dfd;
 
-  if ((dfd = opendir(dir)) == NULL) {
-    fprintf(stderr, "dirwalk: can't open %s\n", dir);
-    return;
-  }
-  while ((dp = readdir(dfd)) != NULL) {
-    if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
-      continue;
-    if (strlen(dir)+strlen(dp->d_name)+2 > sizeof(name))
-      fprintf(stderr, "dirwalk: name %s/%s too long \n", dir, dp->d_name);
-    else {
-      sprintf(name, "%s/%s", dir, dp->d_name);
-      (*fcn)(name);
+    // store our directory entries
+    struct dirent *dirents = malloc(MAX_DIRS * sizeof(struct dirent));
+    int direntsIdx = 0;
+
+    if ((dfd = opendir(dir)) == NULL) {
+      fprintf(stderr, "my_ls: can't open %s\n", dir);
+      return;
     }
+    while ((dp = readdir(dfd)) != NULL) {
+      if (dp->d_name[0] == '.' && !show_hidden_files)
+        continue;
+      if (strlen(dir)+strlen(dp->d_name)+2 > sizeof(name))
+        fprintf(stderr, "my_ls: name %s/%s too long \n", dir, dp->d_name);
+      else {
+        // store in our array of dirents
+        dirents[direntsIdx] = *dp;
+        direntsIdx++;
+      }
+    }
+
+    qsort(dirents, direntsIdx, sizeof(struct dirent), cmpfunc);
+
+    // loop through dirents array and print
+    int i;
+    for (i = 0; i < direntsIdx; i++) {
+      struct dirent d = dirents[i];
+      sprintf(name, "%s/%s", dir, d.d_name);
+      print_target(name, d.d_name);
+    }
+
+    closedir(dfd);
+  // handle if it's a file
+  } else if ((stbuf.st_mode & S_IFMT) == S_IFREG) {
+    fprintf(stdout, "%s\t", name);
   }
-  closedir(dfd);
+}
+
+struct stat get_stat(char *name) {
+  struct stat stbuf;
+  if (stat(name, &stbuf) == -1) {
+    fprintf(stderr, "my_ls: can't access %s\n", name);
+    return stbuf;
+  }
+  return stbuf;
+}
+
+void red() {
+  printf("\033[0;31m");
+}
+
+void blue() {
+  printf("\033[0;36m");
+}
+
+void reset() {
+  printf("\033[0m");
+}
+
+void print_target(char *fullPath, char *name) {
+  struct stat stbuf = get_stat(fullPath);
+  if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
+    blue();
+  } else if (stbuf.st_mode & S_IXUSR) {
+    red();
+  }
+  // TODO: could add colors for other file types e.g. https://axelilly.wordpress.com/2010/12/15/what-do-the-ls-colors-mean-in-bash/
+  fprintf(stdout, "%s\t", name);
+  reset();
 }
