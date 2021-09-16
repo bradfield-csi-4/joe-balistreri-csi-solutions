@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+echo "hello world"
+
+# show first sentence
+# show a list of section headings
+
+# arg=$(tr '[:lower:]' '[:upper:]' <<< ${1:0:1})${1:1}
+#
+# PAGE=`curl "https://en.wikipedia.org/wiki/$arg"`
+#
+# echo $PAGE > page.txt
+
+awk '{ gsub("> <", ">\n<"); gsub("><", ">\n<") } 1' page.txt
+
+# I want to find the mw-content-text id, then find the end of the table after that (</table>); then after that, I want to find the first
+# paragraph tag (<p>), which will contain my first sentence!!
+
+awk '{ gsub("> <", ">\n<"); gsub("><", ">\n<") } 1' page.txt | awk '/mw-content-text/{flag=1;next}/<\/p>/{flag=0}flag' | awk '/<\/table>/{flag=1;next}/<p>/{flag=0}flag'
