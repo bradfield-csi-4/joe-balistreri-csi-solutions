@@ -1,23 +1,8 @@
-package main
+package compute
 
 import (
   "fmt"
 )
-
-func main() {
-  example_memory := [256]byte{
-    0x00, // output data
-    0x03, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, // input data
-    0x01, 0x01, 0x01, // load r1 0x01
-    0x01, 0x02, 0x02, // load r2 0x02
-    0x03, 0x01, 0x02, // add  r1 r2
-    0x02, 0x01, 0x00, // store r1 0x00
-    0xff, // halt
-  }
-
-  compute(&example_memory)
-  fmt.Println(example_memory[0])
-}
 
 func compute(memory *[256]byte) {
   // start program counter at the beginning of the instructions
