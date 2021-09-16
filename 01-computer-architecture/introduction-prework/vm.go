@@ -40,16 +40,31 @@ func compute(memory []byte) {
 		case Load:
 			reg, addr := memory[pc+1],  memory[pc+2]
 			registers[reg] = memory[addr]
-		case Store: // Store
+		case Store:
 			reg, addr := memory[pc+1], memory[pc+2]
 			memory[addr] = registers[reg]
-		case Add: // Add
+		case Add:
 			reg1, reg2 := memory[pc+1], memory[pc+2]
-			registers[1] = registers[reg1] + registers[reg2]
-		case Sub: // Sub
+			registers[reg1] = registers[reg1] + registers[reg2]
+		case Sub:
 			reg1, reg2 := memory[pc+1], memory[pc+2]
-			registers[1] = registers[reg1] - registers[reg2]
-		case Halt: // Halt
+			registers[reg1] = registers[reg1] - registers[reg2]
+		case Addi:
+			reg, i := memory[pc+1], memory[pc+2]
+			registers[reg] += i
+		case Subi:
+			reg, i := memory[pc+1], memory[pc+2]
+			registers[reg] -= i
+		case Jump:
+			registers[0] = memory[pc+1]
+			continue // skip default pc increment
+		case Beqz:
+			reg, offset := memory[pc+1], memory[pc+2]
+			if registers[reg] == 0 {
+				registers[0] += offset + 3
+				continue
+			}
+		case Halt:
 			return
 		default:
 			panic(fmt.Sprintf("unknown instruction %x", op))
