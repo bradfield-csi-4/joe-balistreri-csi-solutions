@@ -39,10 +39,10 @@ func compute(memory []byte) {
 		switch op {
 		case Load:
 			reg, addr := memory[pc+1],  memory[pc+2]
-			registers[reg] = memory[addr]
+			registers[reg] = readmem(memory, addr)
 		case Store:
 			reg, addr := memory[pc+1], memory[pc+2]
-			memory[addr] = registers[reg]
+			memset(memory, addr, registers[reg])
 		case Add:
 			reg1, reg2 := memory[pc+1], memory[pc+2]
 			registers[reg1] = registers[reg1] + registers[reg2]
@@ -72,4 +72,18 @@ func compute(memory []byte) {
 
 		registers[0] += 3
 	}
+}
+
+func memset(memory []byte, dest, value byte) {
+	if dest > 7 {
+		panic("can't overwrite instruction data")
+	}
+	memory[dest] = value
+}
+
+func readmem(memory []byte, dest byte) byte {
+	if dest > 7 {
+		panic("can't read from instruction data")
+	}
+	return memory[dest]
 }
