@@ -1,21 +1,17 @@
 section .text
 global pangram
 pangram:
-	mov cl, [rdi]
-	inc rdi
+	mov cl, [rdi] 			; load the next character of the string
 
-	; exit if we've hit the end of the string
-	cmp cl, 0
+	cmp cl, 0						; proceed to exit if string has terminated
 	je .exit
 
-	; go back to the top if the value is <65
 	sub cl, 65
-	js pangram
 
-.store:
-	mov rbx, 1
-	sal rbx, cl
+	mov rbx, 1					; move 1 into rbx
+	sal rbx, cl					;
 	or rax, rbx
+	inc rdi
 	jg pangram
 .exit:
 	mov rbx, rax
@@ -23,9 +19,9 @@ pangram:
 	or rax, rbx
 	and rax, 0b11111_11111_11111_11111_111111 ; clear the 38 high bits of rax
 	sub rax, 0b11111_11111_11111_11111_111111
-	js .real_exit
+	js .condition_false
 	mov rax, 1
 	ret
-.real_exit:
+.condition_false:
 	mov rax, 0
 	ret
