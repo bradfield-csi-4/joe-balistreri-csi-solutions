@@ -14,24 +14,17 @@ pangram:
 	sub cl, 65
 	js .top
 
-	; store the value if it's in the right range (A-Z)
-	cmp cl, 26
-	jl .store
-
-	; subtract 32 to account for a-z
-	sub cl, 32
-	; if it goes negative, skip because we're in 91-96
-	js .top
-	; if >= 26, we're above a-z
-	cmp cl, 26
-	jge .top
-
 .store:
 	mov rbx, 1
 	sal rbx, cl
 	or rax, rbx
 	jg .top
 .exit:
+	mov rbx, rax
+	shr rbx, 32 					; shift a-z into A-Z positions
+	or rax, rbx
+	sal rax, 38						; clear the 38 high bits of rax
+	shr rax, 38
 	sub rax, 0b11111_11111_11111_11111_111111
 	js .real_exit
 	mov rax, 1
