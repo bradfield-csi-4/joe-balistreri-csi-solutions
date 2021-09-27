@@ -7,8 +7,7 @@ binary_convert:
 	js .exit								; if negative, bl was the null terminator
 
 	inc rdi 								; move to the next position
-	sal rax, 1							; multiply rax by 2
-	add al, bl
+	lea rax, [rbx, rax*2]
 	jmp .start
 .exit:
 	ret
