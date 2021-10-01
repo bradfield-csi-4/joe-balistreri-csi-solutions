@@ -19,9 +19,11 @@ pangram:
 	or rax, rbx
 	and rax, 0b11111_11111_11111_11111_111111 ; clear the 38 high bits of rax
 	sub rax, 0b11111_11111_11111_11111_111111
-	js .condition_false
-	mov rax, 1
+	sets al
 	ret
-.condition_false:
-	mov rax, 0
-	ret
+; 	js .condition_false
+; 	mov rax, 1
+; 	ret
+; .condition_false:
+; 	mov rax, 0
+; 	ret
