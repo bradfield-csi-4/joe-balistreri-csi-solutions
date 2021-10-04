@@ -39,8 +39,8 @@ void free_vec(vec_ptr v) {
  */
 int get_vec_element(vec_ptr v, long index, data_t *dest)
 {
-    if (index < 0 || index >= v->len)
-	return 0;
+  //   if (index < 0 || index >= v->len)
+	// return 0;
     *dest = v->data[index];
     return 1;
 }

@@ -1,4 +1,5 @@
 #include "vendor/unity.h"
+#include "time.h"
 
 #include "vec.h"
 
@@ -38,6 +39,7 @@ void test_basic(void) {
 }
 
 void test_longer(void) {
+
   long n = 1000000;
   vec_ptr u = new_vec(n);
   vec_ptr v = new_vec(n);
@@ -48,7 +50,13 @@ void test_longer(void) {
   }
 
   long expected = (2 * n * n * n + 3 * n * n + n) / 6;
+
+  float startTime = (float)clock()/CLOCKS_PER_SEC;
   TEST_ASSERT_EQUAL(expected, dotproduct(u, v));
+  float endTime = (float)clock()/CLOCKS_PER_SEC;
+
+  float timeElapsed = endTime - startTime;
+  printf("took %f\n", timeElapsed);
 
   free_vec(u);
   free_vec(v);
