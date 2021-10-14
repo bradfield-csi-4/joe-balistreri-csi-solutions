@@ -9,14 +9,18 @@ import (
   "os/exec"
   "os/signal"
   "strings"
-  "syscall"
 )
 
 var cFlag = flag.String("c", "", "Run the shell as a single command instead of a repl")
 var c = make(chan os.Signal, 1)
 
+type inputResp struct {
+  s string
+  err error
+}
+
 func main() {
-  signal.Notify(c)
+  signal.Notify(c, os.Interrupt)
   flag.Parse()
 
   if cFlag != nil && *cFlag != "" {
@@ -24,18 +28,27 @@ func main() {
     return
   }
 
-  // TODO: have this read happen in a channel so we can listen for signals at the same time
-  reader := bufio.NewReader(os.Stdin)
-  for {
-    fmt.Print("🎃 ")
-    text, err := reader.ReadString('\n')
-    if err == io.EOF {
-      break
-    } else if err != nil {
-      panic(err)
+  inputChan := make(chan inputResp)
+  Loop:
+    for {
+      fmt.Print("🎃 ")
+      go func() {
+        text, err := bufio.NewReader(os.Stdin).ReadString('\n')
+        inputChan <- inputResp{s: text, err: err}
+      }()
+
+      select {
+      case input := <-inputChan:
+        if input.err == io.EOF {
+          break Loop
+        } else if input.err != nil {
+          panic(input.err)
+        }
+        run(input.s)
+      case <-c:
+        break Loop
+      }
     }
-    run(text)
-  }
   fmt.Println("\nHave a spooky good time! 🧙🏻🐈‍⬛")
 }
 
@@ -71,20 +84,19 @@ func run(text string) {
         resChan <- string(output)
       }
   }()
-  listenToChannels(resChan, c)
+  if resp, ok := listenToChannels(resChan, c); ok {
+    fmt.Print(resp)
+  } else {
+    fmt.Println()
+    // TODO: terminate child goroutine
+  }
 }
 
-func listenToChannels(resChan chan string, c chan os.Signal) {
+func listenToChannels(resChan chan string, c chan os.Signal) (string, bool) {
   select {
     case r := <-resChan:
-      fmt.Print(r)
-    case s := <- c:
-      switch s {
-      case syscall.SIGURG:
-        fmt.Println("ignoring sigurg")
-        listenToChannels(resChan, c)
-      default:
-        fmt.Println("Got signal:", s)
-      }
+      return r, true
+    case <- c:
+      return "", false
   }
 }
