@@ -2,6 +2,7 @@ package main
 
 import (
   "bufio"
+  "errors"
   "flag"
   "fmt"
   "io"
@@ -14,7 +15,7 @@ import (
 var cFlag = flag.String("c", "", "Run the shell as a single command instead of a repl")
 var c = make(chan os.Signal, 1)
 
-type inputResp struct {
+type resp struct {
   s string
   err error
 }
@@ -28,13 +29,13 @@ func main() {
     return
   }
 
-  inputChan := make(chan inputResp)
+  inputChan := make(chan resp)
   Loop:
     for {
       fmt.Print("🎃 ")
       go func() {
         text, err := bufio.NewReader(os.Stdin).ReadString('\n')
-        inputChan <- inputResp{s: text, err: err}
+        inputChan <- resp{s: text, err: err}
       }()
 
       select {
@@ -56,13 +57,37 @@ func run(text string) {
   text = strings.TrimSuffix(text, "\n")
   args := strings.Split(text, " ")
 
+  i, j := 0, 0
+  for ; j < len(args); j++ {
+    if args[j] == "&&" {
+      if i == j {
+        fmt.Println("Invalid syntax")
+        return
+      }
+      status := handleSingleCommand(args[i:j])
+      if status != 0 {
+        return
+      }
+      i = j + 1
+    }
+  }
+  if j > i {
+    handleSingleCommand(args[i:j])
+  }
+}
+
+func handleSingleCommand(args []string) int {
   switch args[0] {
   case "exit":
     os.Exit(0)
-    return
+    return 0
   case "cd":
-    os.Chdir(strings.Join(args[1:], "/"))
-    return
+    err := os.Chdir(strings.Join(args[1:], "/"))
+    if err != nil {
+      fmt.Println(err)
+      return 1
+    }
+    return 0
   }
 
   var cmd *exec.Cmd
@@ -71,31 +96,37 @@ func run(text string) {
   } else {
     cmd = exec.Command(args[0])
   }
-  resChan := make(chan string)
+  resChan := make(chan resp)
   go func() {
     output, err := cmd.CombinedOutput()
     if err != nil {
       if e, ok := err.(*exec.Error); ok {
-        resChan <- fmt.Sprintf("💀 %s: command not found\n", e.Name)
+          resChan <- resp{s: fmt.Sprintf("💀 %s: command not found\n", e.Name), err: errors.New("fail")}
         } else {
-          resChan <- string(output)
+          resChan <- resp{s: string(output)}
         }
-      } else {
-        resChan <- string(output)
-      }
+    } else {
+      resChan <- resp{s: string(output)}
+    }
   }()
-  if resp, ok := listenToChannels(resChan, c); ok {
-    fmt.Print(resp)
-  } else {
+  strResp, ok := listenToChannels(resChan, c)
+  fmt.Print(strResp)
+  if strResp == "" {
     fmt.Println()
-    // TODO: terminate child goroutine
   }
+  if ok {
+    return 0
+  }
+  return 1
 }
 
-func listenToChannels(resChan chan string, c chan os.Signal) (string, bool) {
+func listenToChannels(resChan chan resp, c chan os.Signal) (string, bool) {
   select {
     case r := <-resChan:
-      return r, true
+      if r.err != nil {
+        return r.s, false
+      }
+      return r.s, true
     case <- c:
       return "", false
   }
