@@ -7,13 +7,16 @@ import (
   "io"
   "os"
   "os/exec"
-  // "reflect"
+  "os/signal"
   "strings"
+  "syscall"
 )
 
 var cFlag = flag.String("c", "", "Run the shell as a single command instead of a repl")
+var c = make(chan os.Signal, 1)
 
 func main() {
+  signal.Notify(c)
   flag.Parse()
 
   if cFlag != nil && *cFlag != "" {
@@ -21,6 +24,7 @@ func main() {
     return
   }
 
+  // TODO: have this read happen in a channel so we can listen for signals at the same time
   reader := bufio.NewReader(os.Stdin)
   for {
     fmt.Print("🎃 ")
@@ -54,14 +58,33 @@ func run(text string) {
   } else {
     cmd = exec.Command(args[0])
   }
-  output, err := cmd.CombinedOutput()
-  if err != nil {
-    if e, ok := err.(*exec.Error); ok {
-      fmt.Printf("💀 %s: command not found\n", e.Name)
-    } else {
-      fmt.Print(string(output))
-    }
-  } else {
-    fmt.Print(string(output))
+  resChan := make(chan string)
+  go func() {
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+      if e, ok := err.(*exec.Error); ok {
+        resChan <- fmt.Sprintf("💀 %s: command not found\n", e.Name)
+        } else {
+          resChan <- string(output)
+        }
+      } else {
+        resChan <- string(output)
+      }
+  }()
+  listenToChannels(resChan, c)
+}
+
+func listenToChannels(resChan chan string, c chan os.Signal) {
+  select {
+    case r := <-resChan:
+      fmt.Print(r)
+    case s := <- c:
+      switch s {
+      case syscall.SIGURG:
+        fmt.Println("ignoring sigurg")
+        listenToChannels(resChan, c)
+      default:
+        fmt.Println("Got signal:", s)
+      }
   }
 }
