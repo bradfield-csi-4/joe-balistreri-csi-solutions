@@ -53,19 +53,27 @@ func main() {
   fmt.Println("\nHave a spooky good time! 🧙🏻🐈‍⬛")
 }
 
+var operatorsToExitSignals = map[string]int{
+  "&&": 0, // continue on 0
+  "||": 1, // continue on 1
+  // note: ; only works if separated by spaces (similar to && and ||)
+  ";": -1, // always continue
+}
+
 func run(text string) {
+
   text = strings.TrimSuffix(text, "\n")
   args := strings.Split(text, " ")
 
   i, j := 0, 0
   for ; j < len(args); j++ {
-    if args[j] == "&&" {
+    if statusToContinue, ok := operatorsToExitSignals[args[j]]; ok {
       if i == j {
         fmt.Println("Invalid syntax")
         return
       }
       status := handleSingleCommand(args[i:j])
-      if status != 0 {
+      if status != statusToContinue && statusToContinue != -1 {
         return
       }
       i = j + 1
