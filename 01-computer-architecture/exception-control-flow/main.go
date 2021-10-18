@@ -62,7 +62,7 @@ func run(command string) {
       additionalArgs = []string{token[:len(token)-1]}
       token = ";"
     }
-    if len(token) == 0 || !(token == "&&" || token == "||" || token == ";")  {
+    if len(token) == 0 || !(token == "&&" || token == "||" || token == ";" || token == "&")  {
       continue
     }
     if i == j && len(additionalArgs) == 0 {
@@ -73,6 +73,7 @@ func run(command string) {
       args: append(split[i:j], additionalArgs...),
       continueOnSuccess: token == "&&" || token == ";",
       continueOnFailure: token == "||" || token == ";",
+      backgroundTask: token == "&",
     })
     i = j + 1
   }
