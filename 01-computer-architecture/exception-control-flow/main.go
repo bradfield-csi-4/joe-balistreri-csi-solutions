@@ -7,12 +7,17 @@ import (
   "io"
   "os"
   "os/exec"
+  "os/signal"
   "strings"
 )
 
+
+var ExitMessage = "\nHave a spooky good time! 🧙🏻🐈‍⬛"
 var cFlag = flag.String("c", "", "Run the shell as a single command instead of a repl")
+var interruptChannel = make(chan os.Signal, 1)
 
 func main() {
+  signal.Notify(interruptChannel, os.Interrupt)
   // allow the program to run a single command passed by a flag
   flag.Parse()
   if cFlag != nil && *cFlag != "" {
@@ -31,7 +36,7 @@ func main() {
     }
     run(command)
   }
-  fmt.Println("\nHave a spooky good time! 🧙🏻🐈‍⬛")
+  fmt.Println(ExitMessage)
 }
 
 func run(command string) {
@@ -43,6 +48,7 @@ func run(command string) {
 
   switch split[0] {
   case "exit":
+    fmt.Println(ExitMessage)
     os.Exit(0)
     return
   case "cd":
@@ -60,13 +66,34 @@ func run(command string) {
   } else {
     cmd = exec.Command(split[0])
   }
-  output, err := cmd.CombinedOutput()
-  if err != nil {
-    if e, ok := err.(*exec.Error); ok {
-        fmt.Printf("💀 %s: command not found\n", e.Name)
+  runKillableCommand(cmd)
+}
+
+func runKillableCommand(cmd *exec.Cmd) {
+  outputChannel := make(chan string)
+
+  // initiate command in a goroutine
+  go func() {
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+      if e, ok := err.(*exec.Error); ok {
+          outputChannel<-fmt.Sprintf("💀 %s: command not found\n", e.Name)
       } else {
-        fmt.Print(string(output))
+        outputChannel<-string(output)
       }
+    } else {
+      outputChannel<-string(output)
+    }
+  }()
+
+  // complete command or kill if interrupt signal received
+  select {
+  case result := <-outputChannel:
+    fmt.Print(result)
+  case <-interruptChannel:
+    if cmd != nil && cmd.Process != nil {
+      cmd.Process.Kill()
+    }
+    fmt.Println()
   }
-  fmt.Print(string(output))
 }
