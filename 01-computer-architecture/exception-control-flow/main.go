@@ -9,8 +9,8 @@ import (
   "os/exec"
   "os/signal"
   "strings"
+  "syscall"
 )
-
 
 var ExitMessage = "\nHave a spooky good time! 🧙🏻🐈‍⬛"
 var cFlag = flag.String("c", "", "Run the shell as a single command instead of a repl")
@@ -26,6 +26,7 @@ func main() {
   }
 
   // main loop
+  var allCommands []*exec.Cmd
   for {
     fmt.Print("🎃 ")
     command, err := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -34,7 +35,12 @@ func main() {
     } else if err != nil {
       panic(err)
     }
-    run(command)
+    allCommands = append(allCommands, run(command)...)
+  }
+  for _, cmd := range allCommands {
+    if cmd != nil && cmd.Process != nil {
+      cmd.Process.Kill()
+    }
   }
   fmt.Println(ExitMessage)
 }
@@ -46,11 +52,11 @@ type ArgumentGroup struct {
   backgroundTask bool
 }
 
-func run(command string) {
+func run(command string) []*exec.Cmd {
   split := strings.Split(strings.TrimSuffix(command, "\n"), " ")
   if len(split) == 0 {
     fmt.Println()
-    return
+    return nil
   }
 
   var argumentGroups []ArgumentGroup
@@ -67,12 +73,12 @@ func run(command string) {
     }
     if i == j && len(additionalArgs) == 0 {
       fmt.Println("Invalid syntax")
-      return
+      return nil
     }
     argumentGroups = append(argumentGroups, ArgumentGroup{
       args: append(split[i:j], additionalArgs...),
-      continueOnSuccess: token == "&&" || token == ";",
-      continueOnFailure: token == "||" || token == ";",
+      continueOnSuccess: token == "&&" || token == ";" || token == "&",
+      continueOnFailure: token == "||" || token == ";" || token == "&",
       backgroundTask: token == "&",
     })
     i = j + 1
@@ -84,8 +90,11 @@ func run(command string) {
   }
 
   // run each argument group
+  var commandsCreated []*exec.Cmd
   for _, group := range argumentGroups {
-    exitStatus := runArgumentGroup(group)
+    cmd, exitStatus := runArgumentGroup(group)
+    commandsCreated = append(commandsCreated, cmd)
+
     if exitStatus == 0 && !group.continueOnSuccess {
       break
     }
@@ -93,21 +102,22 @@ func run(command string) {
       break
     }
   }
+  return commandsCreated
 }
 
-func runArgumentGroup(argGroup ArgumentGroup) int {
+func runArgumentGroup(argGroup ArgumentGroup) (*exec.Cmd, int) {
   switch argGroup.args[0] {
   case "exit":
     fmt.Println(ExitMessage)
     os.Exit(0)
-    return 0
+    return nil, 0
   case "cd":
     err := os.Chdir(strings.Join(argGroup.args[1:], "/"))
     if err != nil {
       fmt.Println(err)
-      return 1
+      return nil, 1
     }
-    return 0
+    return nil, 0
   }
 
   var cmd *exec.Cmd
@@ -117,38 +127,43 @@ func runArgumentGroup(argGroup ArgumentGroup) int {
     cmd = exec.Command(argGroup.args[0])
   }
 
-  return runKillableCommand(cmd)
+  return cmd, runKillableCommand(cmd, argGroup.backgroundTask)
 }
 
-func runKillableCommand(cmd *exec.Cmd) int {
-  outputChannel := make(chan string)
+func runKillableCommand(cmd *exec.Cmd, background bool) int {
+  doneChannel := make(chan bool)
 
   // initiate command in a goroutine
   go func() {
-    output, err := cmd.CombinedOutput()
+    if background {
+      cmd.SysProcAttr = &syscall.SysProcAttr{
+        Setpgid: true,
+      }
+    }
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+    err := cmd.Run()
     if err != nil {
       if e, ok := err.(*exec.Error); ok {
-          outputChannel<-fmt.Sprintf("💀 %s: command not found\n", e.Name)
-      } else {
-        outputChannel<-string(output)
+          fmt.Fprintf(os.Stdout, "💀 %s: command not found\n", e.Name)
       }
-    } else {
-      outputChannel<-string(output)
+    }
+    if !background {
+      doneChannel<-true
     }
   }()
 
+  if background {
+    return 0
+  }
+
   // complete command or kill if interrupt signal received
   select {
-  case result := <-outputChannel:
-    fmt.Print(result)
-    if cmd.Process == nil {
+  case <-doneChannel:
+    if cmd.Process == nil || cmd.ProcessState == nil {
       return 1
     }
-    state, err := cmd.Process.Wait()
-    if err != nil || state == nil {
-      return 1
-    }
-    return state.ExitCode()
+    return cmd.ProcessState.ExitCode()
   case <-interruptChannel:
     if cmd != nil && cmd.Process != nil {
       cmd.Process.Kill()
