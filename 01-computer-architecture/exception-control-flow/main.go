@@ -39,6 +39,13 @@ func main() {
   fmt.Println(ExitMessage)
 }
 
+type ArgumentGroup struct {
+  args []string
+  continueOnSuccess bool
+  continueOnFailure bool
+  backgroundTask bool
+}
+
 func run(command string) {
   split := strings.Split(strings.TrimSuffix(command, "\n"), " ")
   if len(split) == 0 {
@@ -46,30 +53,73 @@ func run(command string) {
     return
   }
 
-  switch split[0] {
+  var argumentGroups []ArgumentGroup
+  i, j := 0, 0
+  for ; j < len(split); j++ {
+    token := split[j]
+    var additionalArgs []string
+    if len(token) > 0 && token[len(token)-1] == ';' {
+      additionalArgs = []string{token[:len(token)-1]}
+      token = ";"
+    }
+    if len(token) == 0 || !(token == "&&" || token == "||" || token == ";")  {
+      continue
+    }
+    if i == j && len(additionalArgs) == 0 {
+      fmt.Println("Invalid syntax")
+      return
+    }
+    argumentGroups = append(argumentGroups, ArgumentGroup{
+      args: append(split[i:j], additionalArgs...),
+      continueOnSuccess: token == "&&" || token == ";",
+      continueOnFailure: token == "||" || token == ";",
+    })
+    i = j + 1
+  }
+  if j > i {
+    argumentGroups = append(argumentGroups, ArgumentGroup{
+      args: split[i:j],
+    })
+  }
+
+  // run each argument group
+  for _, group := range argumentGroups {
+    exitStatus := runArgumentGroup(group)
+    if exitStatus == 0 && !group.continueOnSuccess {
+      break
+    }
+    if exitStatus != 0 && !group.continueOnFailure {
+      break
+    }
+  }
+}
+
+func runArgumentGroup(argGroup ArgumentGroup) int {
+  switch argGroup.args[0] {
   case "exit":
     fmt.Println(ExitMessage)
     os.Exit(0)
-    return
+    return 0
   case "cd":
-    err := os.Chdir(strings.Join(split[1:], "/"))
+    err := os.Chdir(strings.Join(argGroup.args[1:], "/"))
     if err != nil {
       fmt.Println(err)
-      return
+      return 1
     }
-    return
+    return 0
   }
 
   var cmd *exec.Cmd
-  if len(split) > 1 {
-    cmd = exec.Command(split[0], split[1:]...)
+  if len(argGroup.args) > 1 {
+    cmd = exec.Command(argGroup.args[0], argGroup.args[1:]...)
   } else {
-    cmd = exec.Command(split[0])
+    cmd = exec.Command(argGroup.args[0])
   }
-  runKillableCommand(cmd)
+
+  return runKillableCommand(cmd)
 }
 
-func runKillableCommand(cmd *exec.Cmd) {
+func runKillableCommand(cmd *exec.Cmd) int {
   outputChannel := make(chan string)
 
   // initiate command in a goroutine
@@ -90,10 +140,19 @@ func runKillableCommand(cmd *exec.Cmd) {
   select {
   case result := <-outputChannel:
     fmt.Print(result)
+    if cmd.Process == nil {
+      return 1
+    }
+    state, err := cmd.Process.Wait()
+    if err != nil || state == nil {
+      return 1
+    }
+    return state.ExitCode()
   case <-interruptChannel:
     if cmd != nil && cmd.Process != nil {
       cmd.Process.Kill()
     }
     fmt.Println()
+    return 0
   }
 }
