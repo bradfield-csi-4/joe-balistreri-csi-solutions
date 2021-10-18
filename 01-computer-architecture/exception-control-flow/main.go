@@ -10,6 +10,7 @@ import (
   "os/exec"
   "os/signal"
   "strings"
+  "sync"
 )
 
 var cFlag = flag.String("c", "", "Run the shell as a single command instead of a repl")
@@ -20,14 +21,24 @@ type resp struct {
   err error
 }
 
+/*
+  TODO:
+  - fix output so that each line streams instead of waiting for the command to run
+  - test running "traceroute bad.horse"
+  - test running "traceroute bad.horse && sleep 10"
+  - try the above while exiting the sleep; while exiting the entire shell
+*/
+
 func main() {
   signal.Notify(c, os.Interrupt)
   flag.Parse()
+  wg := &sync.WaitGroup{}
 
   if cFlag != nil && *cFlag != "" {
-    run(*cFlag)
+    run(*cFlag, wg)
     return
   }
+
 
   inputChan := make(chan resp)
   Loop:
@@ -45,11 +56,12 @@ func main() {
         } else if input.err != nil {
           panic(input.err)
         }
-        run(input.s)
+        run(input.s, wg)
       case <-c:
         break Loop
       }
     }
+  wg.Wait()
   fmt.Println("\nHave a spooky good time! 🧙🏻🐈‍⬛")
 }
 
@@ -60,21 +72,27 @@ var operatorsToExitSignals = map[string]int{
   ";": -1, // always continue
 }
 
-func run(text string) {
+func run(text string, wg *sync.WaitGroup) {
 
   text = strings.TrimSuffix(text, "\n")
   args := strings.Split(text, " ")
 
   i, j := 0, 0
   for ; j < len(args); j++ {
-    if statusToContinue, ok := operatorsToExitSignals[args[j]]; ok {
+    token := args[j]
+    if statusToContinue, ok := operatorsToExitSignals[token]; ok || token == "&" {
       if i == j {
         fmt.Println("Invalid syntax")
         return
       }
-      status := handleSingleCommand(args[i:j])
-      if status != statusToContinue && statusToContinue != -1 {
-        return
+      if token == "&" {
+        wg.Add(1)
+        go handleSingleCommand(args[i:j])
+      } else {
+        status := handleSingleCommand(args[i:j])
+        if status != statusToContinue && statusToContinue != -1 {
+          return
+        }
       }
       i = j + 1
     }
