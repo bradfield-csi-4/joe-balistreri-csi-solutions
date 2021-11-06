@@ -17,11 +17,11 @@ var cFlag = flag.String("c", "", "Run the shell as a single command instead of a
 var interruptChannel = make(chan os.Signal, 1)
 
 func main() {
-  signal.Notify(interruptChannel, os.Interrupt)
+  signal.Notify(interruptChannel, os.Interrupt, syscall.SIGTSTP)
   // allow the program to run a single command passed by a flag
   flag.Parse()
   if cFlag != nil && *cFlag != "" {
-    run(*cFlag)
+    run(*cFlag, nil)
     return
   }
 
@@ -35,7 +35,12 @@ func main() {
     } else if err != nil {
       panic(err)
     }
-    allCommands = append(allCommands, run(command)...)
+    nextCommands := run(command, allCommands)
+    for _, cmd := range nextCommands {
+      if cmd != nil && cmd.ProcessState == nil {
+        allCommands = append(allCommands, cmd)
+      }
+    }
   }
   for _, cmd := range allCommands {
     if cmd != nil && cmd.Process != nil {
@@ -52,7 +57,7 @@ type ArgumentGroup struct {
   backgroundTask bool
 }
 
-func run(command string) []*exec.Cmd {
+func run(command string, allCommands []*exec.Cmd) []*exec.Cmd {
   split := strings.Split(strings.TrimSuffix(command, "\n"), " ")
   if len(split) == 0 {
     fmt.Println()
@@ -92,7 +97,7 @@ func run(command string) []*exec.Cmd {
   // run each argument group
   var commandsCreated []*exec.Cmd
   for _, group := range argumentGroups {
-    cmd, exitStatus := runArgumentGroup(group)
+    cmd, exitStatus := runArgumentGroup(group, allCommands)
     commandsCreated = append(commandsCreated, cmd)
 
     if exitStatus == 0 && !group.continueOnSuccess {
@@ -105,7 +110,7 @@ func run(command string) []*exec.Cmd {
   return commandsCreated
 }
 
-func runArgumentGroup(argGroup ArgumentGroup) (*exec.Cmd, int) {
+func runArgumentGroup(argGroup ArgumentGroup, allCommands []*exec.Cmd) (*exec.Cmd, int) {
   switch argGroup.args[0] {
   case "exit":
     fmt.Println(ExitMessage)
@@ -117,6 +122,20 @@ func runArgumentGroup(argGroup ArgumentGroup) (*exec.Cmd, int) {
       fmt.Println(err)
       return nil, 1
     }
+    return nil, 0
+  case "fg":
+    if len(allCommands) > 0 {
+      for _, cmd := range allCommands {
+        if cmd != nil && cmd.ProcessState == nil {
+          fmt.Println("signalling!!", cmd)
+          cmd.Process.Signal(syscall.SIGCONT)
+          break
+        }
+      }
+    }
+    return nil, 0
+  case "jobs":
+    fmt.Println(allCommands)
     return nil, 0
   }
 
@@ -164,9 +183,11 @@ func runKillableCommand(cmd *exec.Cmd, background bool) int {
       return 1
     }
     return cmd.ProcessState.ExitCode()
-  case <-interruptChannel:
-    if cmd != nil && cmd.Process != nil {
+  case s := <-interruptChannel:
+    if cmd != nil && cmd.Process != nil && s == os.Interrupt {
       cmd.Process.Kill()
+    } else {
+      fmt.Println("poop!")
     }
     fmt.Println()
     return 0

@@ -1,122 +1,101 @@
 package main
 
 import (
-  "fmt"
-  "unsafe"
+	"fmt"
+	"unsafe"
 )
 
-var WordSize uintptr = 0
-var bucketsOffset uintptr = 0
-var BOffset uintptr = 0
 
-const bucketCnt = 8
-const keySize = 8
-const elemSize = 8
-const topHashSize = bucketCnt * 1
-const bmapSize = topHashSize + (keySize + elemSize) * bucketCnt + 8 //word size
-const elemOffset = topHashSize + keySize * bucketCnt
-
-func init() {
-  var i int
-  WordSize = unsafe.Sizeof(i)
-  fmt.Println("wordSize: ", WordSize)
-  BOffset = WordSize + 1
-  bucketsOffset = WordSize + 8
+// Return string length without use "len"
+func strLenSafe(s string) int  {
+	count := 0
+	for range s {
+		count++
+	}
+	return count
 }
 
-type Point struct {
-  x int
-  y int
+func strLenUnsafe(s string) int  {
+	return *(*int)(unsafe.Pointer(uintptr(unsafe.Pointer(&s)) + uintptr(8)))
+}
+
+// Return y coordinate of a point without using "p.y"
+type Point struct { x , y int }
+
+func getY(p Point) int {
+	return *(*int)(unsafe.Pointer(uintptr(unsafe.Pointer(&p)) + uintptr(8)))
+}
+
+
+// Return sum of []int without using range or []
+func sumIntArray(a []int) int {
+	sum := 0
+	intSize := unsafe.Sizeof(int(0))
+	arrLen := len(a)
+	ap := (uintptr((*(*int)(unsafe.Pointer(uintptr(unsafe.Pointer(&a)))))))
+	for i := 0; i < arrLen; i++ {
+		sum += *(*int)(unsafe.Pointer(ap + uintptr(i)*intSize))
+	}
+	return sum
+}
+
+
+
+// Given a map[int]int return the max value without using range or []
+
+type hmap struct {
+	count     	int
+	flags     	uint8
+	B         	uint8
+	noverflow 	uint16
+	hash0     	uint32
+	buckets    	unsafe.Pointer
+	oldbuckets 	unsafe.Pointer
+	nevacuate  	uintptr
+}
+
+func getMapMaxVal(m map[int]int) int {
+
+	max := 0
+
+	hmap := *(**hmap)(unsafe.Pointer(uintptr(unsafe.Pointer(&m))))
+
+	fmt.Println("count: ", hmap.count)
+	fmt.Println("buckets: ", hmap.buckets)
+	fmt.Println("hash0: ", hmap.hash0)
+	fmt.Println("B: ", hmap.B)
+
+	return max
 }
 
 func main() {
-  s := "hello bob"
-  fmt.Println(myLen(s))
 
-  p := Point{10, 123}
-  fmt.Println(yValue(p))
+	// Try out string length
+	s := "hello, world"
+	l := strLenSafe(s)
+	fmt.Println(l)
+	l = strLenUnsafe(s)
+	fmt.Println(l)
 
-  i := []int{1,2,3,4,5,6}
-  fmt.Println(mySum(i))
+	// Try out getting y coordinate
+	p := Point{5, 3}
+	y := getY(p)
+	fmt.Println(y)
 
-  m := map[int]int {
-    1: 10,
-    2: 23124,
-    3: 5432,
-  }
-  for i := 4; i < 10000; i++ {
-    m[i] = i
-  }
-  fmt.Println(myMax(m))
-}
+	// Try out array sum
+	a := []int{2, 3, 5, 7, 11}
+	sum := sumIntArray(a)
+	fmt.Println(sum)
 
-func myLen(s string) int {
-  return *(*int)(unsafe.Pointer(uintptr(unsafe.Pointer(&s)) + WordSize))
-}
+  fmt.Println("joe")
+	// Try out map max value
+	m := map[int]int{
+		1:	435,
+		2:	824,
+		3:	234,
+		4: 	123,
+	}
+	max := getMapMaxVal(m)
+	fmt.Println(max)
 
-func yValue(p Point) int {
-  return *(*int)(unsafe.Pointer(uintptr(unsafe.Pointer(&p)) + WordSize))
-}
-
-func mySum(a []int) int {
-  var total int
-  l := *(*int)(unsafe.Pointer(uintptr(unsafe.Pointer(&a)) + WordSize))
-  for i := 0; i < l; i++ {
-    total += *(*int)(unsafe.Pointer(uintptr(unsafe.Pointer(*(*uintptr)(unsafe.Pointer(&a)) + WordSize * uintptr(i)))))
-  }
-  return total
-}
-
-type hmap struct {
-  count int
-  flags uint8
-  B uint8
-  noverflow uint16
-  hash0 uint32
-  buckets *intBucket
-  oldbuckets *intBucket
-  nevacuate uintptr
-  extra *mapextra
-}
-
-type mapextra struct {
-  overflow *[]*intBucket
-  oldoverflow *[]*intBucket
-  nextOverflow *intBucket
-}
-
-type intBucket struct {
-  tophash [8]uint8
-  keys [8]int
-  elems [8]int
-  overflow *intBucket
-}
-
-func myMax(m map[int]int) int {
-  hmap := *(*hmap)(unsafe.Pointer(*(*uintptr)(unsafe.Pointer(&m))))
-  totalBuckets := 1 << hmap.B
-  max := 0
-  var exampleBucket intBucket
-
-  // loop through each bucket
-  for i := 0; i < totalBuckets; i++ {
-    bucket := *(*intBucket)(unsafe.Pointer(uintptr(unsafe.Pointer(hmap.buckets)) + uintptr(i) * unsafe.Sizeof(exampleBucket)))
-
-    // for each bucket, loop through the elements and then check the overflow bucket
-  overflowloop:
-    for {
-      for j := 0; j < 8; j++ {
-        nextVal := *(*int)(unsafe.Pointer(uintptr(unsafe.Pointer(&bucket.elems)) + uintptr(j) * elemSize))
-        if nextVal > max {
-          max = nextVal
-        }
-      }
-      if bucket.overflow == nil {
-        break overflowloop
-      }
-      bucket = *bucket.overflow
-    }
-  }
-
-  return max
 }
