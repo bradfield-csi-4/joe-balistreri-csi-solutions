@@ -1,0 +1,19 @@
+4c 00 00 00 // size 76 bytes
+4c 00 00 00 // size 76 bytes
+
+// start ethernet packet
+
+a4 5e 60 df 2e 1b // source MAC addr
+c4 e9 84 87 60 28 // dest MAC addr
+08 00 // IPV4 datagram
+
+// start IPv4 header
+
+4 // v4
+5 // 20 byte header length
+48 // DSCP and ECN (???)
+00 3c // Total length -> (total length 60 bytes)
+00 00 40 00 29 06 d3 ad  c0 1e fc 9a c0 a8 00 65 // 20 bytes
+00 50 e7 9f 08 fc 83 16  5e ab 22 66 a0 12 6f 40
+37 49 00 00 02 04 05 9c  04 02 08 0a ad da 88 b3 // 52 bytes
+3a 4d bd c5 01 03 03 0a  b2 f8

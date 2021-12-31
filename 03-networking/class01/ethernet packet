@@ -1,0 +1,65 @@
+** ethernet is big-endian **
+
+
+this was produced by:
+hexdump -s 40 -n 78 -C net.cap
+
+// * start ethernet frame *
+
+c4 e9 84 87 60 28 // destination mac addr
+a4 5e 60 df 2e 1b  // source mac addr
+08 00 // ether type -> contains an IPV4 datagram
+
+// * start IPV4 datagram
+
+// * start IPV4 header
+
+4 // version -> 4 for IPV4
+5 // internet header length -> 5, 32-bit words (20 bytes)
+00 // DSCP and ECN
+00 40 // Total length -> 64 bytes
+d0 03 // identification
+00 00 // flags and fragment offset
+40 // ttl (64 seconds?)
+06 // protocol (TCP)
+2c ee // header checksum
+c0 a8 00 65 // source IP (192.168.0.101)
+c0 1e fc 9a // destination IP (192.30.252.154)
+
+// * end IPV4 header
+
+// * start TCP segment
+
+// * start TCP header
+
+e7 9f // source port (59295)
+00 50 // destination port (80 - non-secure, HTTP protocol port)
+5e ab 22 65 // sequence number
+00 00 00 00 // ack number
+b // data offset - size of tcp header in 32-bit words (11 words = 44 bytes)
+0 // reserved / flag 0
+02 // flags (1-9) (SYN flag set)
+ff ff // window size (max receivable size allowed, 65,535 bytes)
+58 23 // check sum
+00 00 // urg pointer
+
+02 04 05 b4 // max segment size (1460 bytes)
+01 // no operation
+03 03 05 // window scale (5 bits shifted left; scaled the window up to ~2 MB)
+01 // no operation
+01 // no operation
+08 0a // timestamps
+  3a 4d bd c5 // timestamp
+  00 00 00 00 // echo of previous timestamp
+04 02 // selective acknowledgement permitted
+
+00 00 // padding
+
+// * end TCP segment
+
+// * end IPV4 datagram
+
+// ethernet frame checksum (or not??)
+** are we missing the ethernet checksum???? **
+
+// * end ethernet frame *
