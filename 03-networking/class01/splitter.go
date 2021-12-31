@@ -59,7 +59,6 @@ func main() {
     if clientIp == nil {
       clientIp = sourceIp
     }
-
     fromServer := false
     if string(sourceIp) == string(clientIp) {
       fmt.Println("client request")
@@ -67,15 +66,13 @@ func main() {
       fromServer = true
       fmt.Println("server response")
     }
-    // parsing the IPv4 flags may be useful, but i don't think we need it
-    // reduce the size of the IP datagram to match the total length field
     ipDatagramLength := binary.BigEndian.Uint16(ipV4Datagram[2:4])
     ipV4Datagram = ipV4Datagram[:ipDatagramLength]
 
     ipV4HeaderLengthBytes := int(ipV4Datagram[0] << 2 >> 2) * 4 // header length is in 32-bit words
 
 
-    // parse tcp segment header
+    // parse tcp segment header and collect server responses
     tcpSegment := ipV4Datagram[ipV4HeaderLengthBytes:]
     seqNo := int(binary.BigEndian.Uint32(tcpSegment[4:8]))
     ackNo := int(binary.BigEndian.Uint32(tcpSegment[8:12]))
@@ -95,15 +92,16 @@ func main() {
     data = data[capPacketHeaderLen + pl:]
   }
 
+  // sort and combine server responses into single payload
   sort.SliceStable(responses, func(i, j int) bool {
       return responses[i].sequenceNo < responses[j].sequenceNo
   })
-
   result := &bytes.Buffer{}
   for _, resp := range responses {
     result.Write(resp.payload)
   }
 
+  // remove HTTP headers and write payload body to output file
   r := result.String()
   var contentLength int
   for _, line := range strings.Split(r, "\n") {
@@ -114,8 +112,6 @@ func main() {
       break
     }
   }
-
   payload := r[len(r)-contentLength:len(r)]
-
   os.WriteFile("output", []byte(payload), 0644)
 }
