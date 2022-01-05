@@ -53,11 +53,6 @@ func main() {
   }
 
   printResponse(response)
-  // conn, err := net.Dial("udp", "8.8.8.8:53")
-  // if err != nil {
-  //   panic(err)
-  // }
-  // _ = conn
 }
 
 func printResponse(payload []byte) {
