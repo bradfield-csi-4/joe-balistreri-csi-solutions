@@ -3,6 +3,7 @@ package main
 import (
   "syscall"
   "fmt"
+  "log"
 )
 
 const port = 8888
@@ -10,41 +11,65 @@ const port = 8888
 func main() {
   fmt.Println(BANNER)
   fmt.Println("connecting to socket...")
-  fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
-  if err != nil {
-    panic(err)
-  }
+  proxyFd := tcpSocket()
   defer func() {
-    syscall.Close(fd)
+    syscall.Close(proxyFd)
   }()
 
   fmt.Printf("binding to port %d...\n", port)
-  err = syscall.Bind(fd, &syscall.SockaddrInet4{Port: port})
-  if err != nil {
-    panic(err)
-  }
+  bind(proxyFd, port)
 
   fmt.Println("server is now listening")
-  err = syscall.Listen(fd, 20)
+  err := syscall.Listen(proxyFd, 20)
   if err != nil {
-    panic(err)
+    log.Fatalf("%v", err)
   }
 
+
   for {
-    nfd, sa, err := syscall.Accept(fd)
+    clientFd, sa, err := syscall.Accept(proxyFd)
     if err != nil {
-      panic(err)
+      log.Fatalf("%v", err)
     }
     fmt.Println("received an incoming connection!")
     data := make([]byte, 4096)
-    n, _, err := syscall.Recvfrom(nfd, data, 0)
+    n, _, err := syscall.Recvfrom(clientFd, data, 0)
     if err != nil {
-      panic(err)
+      log.Fatalf("%v", err)
     }
     fmt.Printf("read %d bytes\n", n)
 
-    syscall.Sendmsg(nfd, data, nil, sa, 0)
-    syscall.Close(nfd)
+    callDestination(8000, data)
+
+    syscall.Sendmsg(clientFd, data, nil, sa, 0)
+    syscall.Close(clientFd)
+  }
+}
+
+func callDestination(port int, data []byte) {
+  // connect to destination server
+  serverFd := tcpSocket()
+  err := syscall.Connect(serverFd, &syscall.SockaddrInet4{Addr: [4]byte{127,0,0,1}, Port: port})
+  if err != nil {
+    log.Fatalf("failed to connect to destination. %v", err)
+  }
+  syscall.Sendmsg(serverFd, data, nil, &syscall.SockaddrInet4{Port: port}, 0)
+  fmt.Println("sent message to server")
+  syscall.Close(serverFd)
+}
+
+func tcpSocket() int {
+  fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
+  if err != nil {
+    log.Fatalf("%v", err)
+  }
+  return fd
+}
+
+func bind(fd, port int) {
+  err := syscall.Bind(fd, &syscall.SockaddrInet4{Port: port})
+  if err != nil {
+    log.Fatalf("%v", err)
   }
 }
 
