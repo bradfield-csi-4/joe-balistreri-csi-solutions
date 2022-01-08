@@ -7,6 +7,7 @@ import (
 )
 
 const port = 8888
+const dstPort = 9000
 
 func main() {
   fmt.Println(BANNER)
@@ -33,29 +34,34 @@ func main() {
     }
     fmt.Println("received an incoming connection!")
     data := make([]byte, 4096)
-    n, _, err := syscall.Recvfrom(clientFd, data, 0)
+    _, _, err = syscall.Recvfrom(clientFd, data, 0)
     if err != nil {
       log.Fatalf("%v", err)
     }
-    fmt.Printf("read %d bytes\n", n)
 
-    callDestination(8000, data)
+    respData := callDestination(dstPort, data)
 
-    syscall.Sendmsg(clientFd, data, nil, sa, 0)
+    syscall.Sendmsg(clientFd, respData, nil, sa, 0)
     syscall.Close(clientFd)
   }
 }
 
-func callDestination(port int, data []byte) {
-  // connect to destination server
-  serverFd := tcpSocket()
-  err := syscall.Connect(serverFd, &syscall.SockaddrInet4{Addr: [4]byte{127,0,0,1}, Port: port})
+func callDestination(port int, data []byte) []byte {
+  sa := &syscall.SockaddrInet4{Port: port}
+  fd := tcpSocket()
+  err := syscall.Connect(fd, sa)
   if err != nil {
     log.Fatalf("failed to connect to destination. %v", err)
   }
-  syscall.Sendmsg(serverFd, data, nil, &syscall.SockaddrInet4{Port: port}, 0)
+  syscall.Sendmsg(fd, data, nil, sa, 0)
   fmt.Println("sent message to server")
-  syscall.Close(serverFd)
+  respData := make([]byte, 4096)
+  _, _, err = syscall.Recvfrom(fd, respData, 0)
+  if err != nil {
+    log.Fatalf("failed to receive from destination. %v", err)
+  }
+  syscall.Close(fd)
+  return respData
 }
 
 func tcpSocket() int {
