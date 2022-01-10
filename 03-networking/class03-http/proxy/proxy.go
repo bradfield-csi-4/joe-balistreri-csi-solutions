@@ -15,17 +15,6 @@ var cacheableRoutes = []string{
   "/website/",
 }
 
-var hopByHopHeaders = map[string]bool {
-  "keep-alive": true,
-  "transfer-encoding": true,
-  "te": true,
-  "connection": true,
-  "trailer": true,
-  "upgrade": true,
-  "proxy-authorization": true,
-  "proxy-authenticate": true,
-}
-
 var pageCache = map[string][]byte{}
 
 func ListenAndServe(proxyFd int) {
@@ -34,14 +23,22 @@ func ListenAndServe(proxyFd int) {
     log.Fatalf("%v", err)
   }
   fmt.Println("received an incoming connection!")
+
+  handleSingleRequest(clientFd, sa)
+}
+
+func handleSingleRequest(clientFd int, sa syscall.Sockaddr) {
   data := make([]byte, 4096)
   n, _, err := syscall.Recvfrom(clientFd, data, 0)
+  fmt.Println("received a message")
   data = data[:n]
   if err != nil {
     log.Fatalf("%v", err)
   }
 
   req := parseRequest(data)
+
+  fmt.Printf("got request: %+v\n", req)
 
   var dataToReturn []byte
   cachedData, shouldCache, ok := cachedResponse(req)
@@ -56,7 +53,14 @@ func ListenAndServe(proxyFd int) {
   }
 
   syscall.Sendmsg(clientFd, dataToReturn, nil, sa, 0)
-  syscall.Close(clientFd)
+
+  if strings.ToLower(req.singleHopHeaders.connection) == "keep=alive" {
+    // start a new goroutine to handle the next message on this connection
+    go handleSingleRequest(clientFd, sa)
+  } else {
+    syscall.Close(clientFd)
+  }
+  return
 }
 
 func cachedResponse(req httpRequestMessage) (data []byte, shouldCache bool, ok bool) {

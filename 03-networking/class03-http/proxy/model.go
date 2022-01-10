@@ -39,11 +39,33 @@ func parseRequest(data []byte) httpRequestMessage {
     headerMap[headerPieces[0]] = headerPieces[1]
   }
 
+  singleHop := removeSingleHopHeaders(headerMap)
+
   return httpRequestMessage{
     body: []byte(body),
     headers: headerMap,
+    singleHopHeaders: singleHop,
     requestLine: requestLine,
   }
+}
+
+func removeSingleHopHeaders(headerMap map[string]string) singleHopHeaders {
+  result := singleHopHeaders{}
+
+  for k, v := range headerMap {
+    switch strings.ToLower(k) {
+    case "connection":
+      result.connection = v
+    case "keep-alive", "transfer-encoding", "te", "trailer", "upgrade", "proxy-authorization", "proxy-authenticate":
+      // fall through so the value is deleted
+      // could add them to the singleHopHeaders struct as a future improvement
+    default:
+      continue
+    }
+    delete(headerMap, k)
+  }
+
+  return result
 }
 
 func (h *httpRequestMessage) toHTTP() []byte {
@@ -67,6 +89,11 @@ type httpRequestMessage struct {
   requestLine
   headers map[string]string
   body []byte
+  singleHopHeaders
+}
+
+type singleHopHeaders struct {
+  connection string
 }
 
 type requestLine struct {
