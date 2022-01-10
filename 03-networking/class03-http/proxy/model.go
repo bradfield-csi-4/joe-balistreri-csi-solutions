@@ -1,5 +1,10 @@
 package proxy
 
+import (
+  "strings"
+  "log"
+)
+
 func parseRequest(data []byte) httpRequestMessage {
   messagePieces := strings.Split(string(data), "\r\n\r\n")
   headers := strings.Split(messagePieces[0], "\r\n")

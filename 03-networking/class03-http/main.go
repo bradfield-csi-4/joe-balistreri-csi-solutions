@@ -3,7 +3,6 @@ package main
 import (
   "syscall"
   "fmt"
-  "strings"
   "log"
   "github.com/jbalistreri/bradfield-csi-solutions/03-networking/class03-http/proxy"
 )

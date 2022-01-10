@@ -28,26 +28,6 @@ var hopByHopHeaders = map[string]bool {
 
 var pageCache = map[string][]byte{}
 
-func main() {
-  fmt.Println(BANNER)
-  proxyFd := TcpSocket()
-  defer func() {
-    syscall.Close(proxyFd)
-  }()
-
-  Bind(proxyFd, port)
-
-  fmt.Printf("server is now listening on port %d\n", port)
-  err := syscall.Listen(proxyFd, 20)
-  if err != nil {
-    log.Fatalf("%v", err)
-  }
-
-  for {
-    listenAndServe(proxyFd)
-  }
-}
-
 func ListenAndServe(proxyFd int) {
   clientFd, sa, err := syscall.Accept(proxyFd)
   if err != nil {
