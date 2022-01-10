@@ -67,7 +67,7 @@ func handleSingleRequest(clientFd int, sa syscall.Sockaddr) {
 
   syscall.Sendmsg(clientFd, dataToReturn, nil, sa, 0)
 
-  if strings.ToLower(req.singleHopHeaders.connection) == "keep=alive" {
+  if strings.ToLower(req.singleHopHeaders.connection) == "keep-alive" {
     // start a new goroutine to handle the next message on this connection
     go handleSingleRequest(clientFd, sa)
   } else {
