@@ -49,7 +49,7 @@ func ListenAndServe(proxyFd int) {
     fmt.Println("using cached response!")
     dataToReturn = cachedData
   } else {
-    dataToReturn = callDestination(dstPort, data)
+    dataToReturn = callDestination(dstPort, req.toHTTP())
     if shouldCache {
       pageCache[req.url] = dataToReturn
     }
