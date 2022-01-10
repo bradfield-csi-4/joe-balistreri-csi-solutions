@@ -3,6 +3,8 @@ package main
 import (
   "syscall"
   "fmt"
+  "os"
+  "os/signal"
   "log"
   "github.com/jbalistreri/bradfield-csi-solutions/03-networking/class03-http/proxy"
 )
@@ -11,10 +13,18 @@ const port = 8000
 const dstPort = 9000
 
 func main() {
+  sigs := make(chan os.Signal, 1)
+  signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
   fmt.Println(BANNER)
   proxyFd := proxy.TcpSocket()
-  defer func() {
+  // allow the socket to be reused so we can immediately restart the server
+  syscall.SetsockoptInt(proxyFd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
+  go func() {
+    <-sigs
+    fmt.Println("gracefully shutting down")
     syscall.Close(proxyFd)
+    os.Exit(0)
   }()
 
   proxy.Bind(proxyFd, port)

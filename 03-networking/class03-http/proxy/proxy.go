@@ -28,15 +28,24 @@ func ListenAndServe(proxyFd int) {
 }
 
 func handleSingleRequest(clientFd int, sa syscall.Sockaddr) {
-  data := make([]byte, 4096)
-  n, _, err := syscall.Recvfrom(clientFd, data, 0)
-  fmt.Println("received a message")
-  data = data[:n]
-  if err != nil {
-    log.Fatalf("%v", err)
+  var httpBuf []byte // TODO: could use a bytes.Buffer, but it made checking for the double return harder
+
+  // loop until we get two newlines, so we can receive the message in multiple pieces
+  for {
+    data := make([]byte, 4096)
+    n, _, err := syscall.Recvfrom(clientFd, data, 0)
+    if err != nil {
+      log.Fatalf("%v", err)
+    }
+    fmt.Println("received a message")
+    data = data[:n]
+    httpBuf = append(httpBuf, data...)
+    if strings.Contains(string(httpBuf), DBL_BREAK) {
+      break
+    }
   }
 
-  req := parseRequest(data)
+  req := parseRequest(httpBuf)
 
   fmt.Printf("got request: %+v\n", req)
 
