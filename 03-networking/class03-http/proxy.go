@@ -12,50 +12,79 @@ const dstPort = 9000
 
 
 var cacheableRoutes = []string{
-  "website/",
+  "/website/",
 }
 
 var pageCache = map[string][]byte{}
 
 func main() {
   fmt.Println(BANNER)
-  fmt.Println("connecting to socket...")
   proxyFd := tcpSocket()
   defer func() {
     syscall.Close(proxyFd)
   }()
 
-  fmt.Printf("binding to port %d...\n", port)
   bind(proxyFd, port)
 
-  fmt.Println("server is now listening")
+  fmt.Printf("server is now listening on port %d\n", port)
   err := syscall.Listen(proxyFd, 20)
   if err != nil {
     log.Fatalf("%v", err)
   }
 
-
   for {
-    clientFd, sa, err := syscall.Accept(proxyFd)
-    if err != nil {
-      log.Fatalf("%v", err)
-    }
-    fmt.Println("received an incoming connection!")
-    data := make([]byte, 4096)
-    n, _, err := syscall.Recvfrom(clientFd, data, 0)
-    data = data[:n]
-    if err != nil {
-      log.Fatalf("%v", err)
-    }
-
-    request := parseRequest(data)
-    fmt.Printf("got request: %+v\n", request)
-
-    respData := callDestination(dstPort, data)
-
-    syscall.Sendmsg(clientFd, respData, nil, sa, 0)
-    syscall.Close(clientFd)
+    listenAndServe(proxyFd)
   }
+}
+
+func listenAndServe(proxyFd int) {
+  clientFd, sa, err := syscall.Accept(proxyFd)
+  if err != nil {
+    log.Fatalf("%v", err)
+  }
+  fmt.Println("received an incoming connection!")
+  data := make([]byte, 4096)
+  n, _, err := syscall.Recvfrom(clientFd, data, 0)
+  data = data[:n]
+  if err != nil {
+    log.Fatalf("%v", err)
+  }
+
+  req := parseRequest(data)
+
+  var dataToReturn []byte
+  cachedData, shouldCache, ok := cachedResponse(req)
+  if ok {
+    fmt.Println("using cached response!")
+    dataToReturn = cachedData
+  } else {
+    dataToReturn = callDestination(dstPort, data)
+    if shouldCache {
+      pageCache[req.url] = dataToReturn
+    }
+  }
+
+  syscall.Sendmsg(clientFd, dataToReturn, nil, sa, 0)
+  syscall.Close(clientFd)
+}
+
+func cachedResponse(req httpRequestMessage) (data []byte, shouldCache bool, ok bool) {
+  if !cachingEnabled(req) {
+    return nil, false, false
+  }
+
+  data, ok = pageCache[req.url]
+  return data, true, ok
+}
+
+func cachingEnabled(req httpRequestMessage) (shouldCache bool) {
+  for _, route := range cacheableRoutes {
+    if strings.HasPrefix(req.url, route) {
+      shouldCache = true
+      break
+    }
+  }
+  return shouldCache
 }
 
 func parseRequest(data []byte) httpRequestMessage {
