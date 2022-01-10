@@ -34,6 +34,10 @@ func handleSingleRequest(clientFd int, sa syscall.Sockaddr) {
   for {
     data := make([]byte, 4096)
     n, _, err := syscall.Recvfrom(clientFd, data, 0)
+    if n == 0 {
+      fmt.Println("client disconnected before sending a complete message")
+      return
+    }
     if err != nil {
       log.Fatalf("%v", err)
     }
