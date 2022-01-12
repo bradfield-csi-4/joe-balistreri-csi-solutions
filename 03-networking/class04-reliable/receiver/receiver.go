@@ -5,6 +5,7 @@ import (
   "syscall"
   "strconv"
   "log"
+  "shared"
   "os"
 )
 
@@ -31,10 +32,16 @@ func main() {
     }
     request = request[:n]
 
-    fmt.Printf("got request: %s\n", string(request))
+    requestHeader := shared.HeaderFromBytes(request)
 
-    payload := []byte(string(request) + string(request))
+    fmt.Printf("got request: %+v\n", requestHeader)
+    if shared.SumBytes(requestHeader) != shared.ValidSum {
+      fmt.Println("got corrupted packet!")
+    }
 
-    syscall.Sendto(fd, payload, 0, &syscall.SockaddrInet4{Port: proxyPort})
+    payload := []byte(string(requestHeader.Data) + string(requestHeader.Data))
+    payloadWithHeader := shared.HeaderToBytes(shared.NewHeader(payload))
+
+    syscall.Sendto(fd, payloadWithHeader, 0, &syscall.SockaddrInet4{Port: proxyPort})
   }
 }

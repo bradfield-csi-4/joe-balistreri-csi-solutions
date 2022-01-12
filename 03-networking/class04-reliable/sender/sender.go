@@ -7,6 +7,7 @@ import (
   "strconv"
   "syscall"
   "time"
+  "shared"
 )
 
 const senderPort = 8000
@@ -28,7 +29,9 @@ func main() {
   for {
     payload := []byte(fmt.Sprintf("Hello, it's me! %d", i))
 
-    syscall.Sendto(fd, payload, 0, &syscall.SockaddrInet4{Port: proxyPort})
+    payloadWithHeader := shared.HeaderToBytes(shared.NewHeader(payload))
+
+    syscall.Sendto(fd, payloadWithHeader, 0, &syscall.SockaddrInet4{Port: proxyPort})
 
     response := make([]byte, 65536)
     n, _, err := syscall.Recvfrom(fd, response, 0)
@@ -37,7 +40,12 @@ func main() {
     }
     response = response[:n]
 
-    fmt.Printf("got response: %s\n", string(response))
+    responseHeader := shared.HeaderFromBytes(response)
+    if shared.SumBytes(responseHeader) != shared.ValidSum {
+      fmt.Println("got corrupted packet!")
+    }
+
+    fmt.Printf("got response: %+v\n", responseHeader)
     i++
 
     time.Sleep(time.Second)
