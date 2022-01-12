@@ -7,14 +7,13 @@ import (
 const zero uint16 = 0
 const ValidSum uint16 = ^zero
 
-func SumBytes(header Header) uint16 {
-  padded := header.Data
-  if len(padded) % 2 != 0 {
-    padded = append(padded, 0)
+func SumBytes(header Header) (sum uint16) {
+  b := HeaderToBytes(header)
+  if len(b) % 2 != 0 {
+    b = append(b, 0)
   }
-  sum := sumWithCarry(header.Length, header.Checksum)
-  for i := 0; i < len(padded); i += 2 {
-    sum = sumWithCarry(bytesToUint16(padded[i:i+2]), sum)
+  for i := 0; i < len(b); i += 2 {
+    sum = sumWithCarry(bytesToUint16(b[i:i+2]), sum)
   }
   return sum
 }
