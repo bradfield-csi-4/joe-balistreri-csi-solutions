@@ -34,9 +34,9 @@ func main() {
 
     requestHeader := shared.HeaderFromBytes(request)
 
-    fmt.Printf("got request: %+v\n", requestHeader)
+    fmt.Printf("got request: %s\n", string(requestHeader.Data))
     if shared.SumBytes(requestHeader) != shared.ValidSum {
-      fmt.Println("got corrupted packet!")
+      fmt.Println("\n\n got corrupted packet! 🔥🔥")
     }
 
     payload := []byte(string(requestHeader.Data) + string(requestHeader.Data))

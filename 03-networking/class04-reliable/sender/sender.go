@@ -42,10 +42,10 @@ func main() {
 
     responseHeader := shared.HeaderFromBytes(response)
     if shared.SumBytes(responseHeader) != shared.ValidSum {
-      fmt.Println("got corrupted packet!")
+      fmt.Println("\n\n got corrupted packet! 🔥🔥")
     }
 
-    fmt.Printf("got response: %+v\n", responseHeader)
+    fmt.Printf("got response: %s\n", string(responseHeader.Data))
     i++
 
     time.Sleep(time.Second)
