@@ -1,5 +1,9 @@
 package db
 
+import (
+	"sort"
+)
+
 type MemTable struct {
 	m map[string][]byte
 }
@@ -33,17 +37,39 @@ func (m *MemTable) Delete(key []byte) error {
 }
 
 func (m *MemTable) RangeScan(start, limit []byte) (Iterator, error) {
-	return &MemIterator{}, nil
+	var sortedPairs [][2][]byte
+	for k, v := range m.m {
+		sortedPairs = append(sortedPairs, [2][]byte{[]byte(k), v})
+	}
+	sort.SliceStable(sortedPairs, func(i, j int) bool {
+		return string(sortedPairs[i][0]) < string(sortedPairs[j][0])
+	})
+	var keys [][]byte
+	var values [][]byte
+	for _, pair := range sortedPairs {
+		keys = append(keys, pair[0])
+		values = append(values, pair[1])
+	}
+	return &MemIterator{
+		keys: keys,
+		values: values,
+	}, nil
 }
 
 type MemIterator struct {
-
+	keys [][]byte
+	values [][]byte
+	i int
 }
 
 // Next moves the iterator to the next key/value pair.
 // It returns false if the iterator is exhausted.
 func (m *MemIterator) Next() bool {
-	return true
+	if m.i < len(m.keys) - 1 {
+		m.i++
+		return true
+	}
+	return false
 }
 
 // Error returns any accumulated error. Exhausting all the key/value pairs
@@ -54,10 +80,10 @@ func (m *MemIterator) Error() error {
 
 // Key returns the key of the current key/value pair, or nil if done.
 func (m *MemIterator) Key() []byte {
-	return nil
+	return m.keys[m.i]
 }
 
 // Value returns the value of the current key/value pair, or nil if done.
 func (m *MemIterator) Value() []byte {
-	return nil
+	return m.values[m.i]
 }
