@@ -46,7 +46,16 @@ func (m *MemTable) RangeScan(start, limit []byte) (Iterator, error) {
 	})
 	var keys [][]byte
 	var values [][]byte
+	sstring := string(start)
+	lstring := string(limit)
+	// TODO: could do binary search here instead
 	for _, pair := range sortedPairs {
+		if string(pair[0]) < sstring {
+			continue
+		}
+		if string(pair[0]) > lstring {
+			break
+		}
 		keys = append(keys, pair[0])
 		values = append(values, pair[1])
 	}

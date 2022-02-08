@@ -76,7 +76,7 @@ func TestMemTable(t *testing.T) {
 
 		So(t, should.Equal(string(i.Key()), "goodbye"))
 		So(t, should.Equal(string(i.Value()), "sky"))
-		So(t, should.BeTrue(i.Next()))
+		So(t, should.BeFalse(i.Next()))
 
 		So(t, should.BeNil(i.Error()))
 	})
