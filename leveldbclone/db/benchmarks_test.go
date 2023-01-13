@@ -14,6 +14,7 @@ func keyFromIterator(i int) []byte {
 func BenchmarkFillSeqTest(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
@@ -22,6 +23,7 @@ func BenchmarkFillSeqTest(b *testing.B) {
 func BenchmarkFillRandom(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
@@ -34,6 +36,7 @@ func BenchmarkOverwrite(b *testing.B) {
 		mt.Put(keyFromIterator(i), v)
 	}
 	v2 := []byte("Cadabra")
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mt.Put(keyFromIterator(rand.Intn(MAX_KEYS)), v2)
 	}
@@ -45,6 +48,7 @@ func BenchmarkDeleteSeq(b *testing.B) {
 	for i := 0; i <= MAX_KEYS; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mt.Delete(keyFromIterator(i))
 	}
@@ -56,6 +60,7 @@ func BenchmarkDeleteRandom(b *testing.B) {
 	for i := 0; i <= MAX_KEYS; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mt.Delete(keyFromIterator(rand.Intn(MAX_KEYS)))
 	}
@@ -67,6 +72,7 @@ func BenchmarkReadSeq(b *testing.B) {
 	for i := 0; i <= MAX_KEYS; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mt.Get(keyFromIterator(i))
 	}
@@ -78,6 +84,7 @@ func BenchmarkReadReverse(b *testing.B) {
 	for i := 0; i <= MAX_KEYS; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mt.Get(keyFromIterator(MAX_KEYS - i))
 	}
@@ -89,6 +96,7 @@ func BenchmarkReadRandom(b *testing.B) {
 	for i := 0; i <= MAX_KEYS; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		mt.Get(keyFromIterator(rand.Intn(MAX_KEYS)))
 	}
