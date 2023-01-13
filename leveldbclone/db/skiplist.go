@@ -17,10 +17,18 @@ func NewSkipList() SkipList {
 }
 
 func (s *SkipList) Get(key []byte) (value []byte, err error) {
+	node, err := s.getNode(key)
+	if err != nil || node == nil {
+		return nil, err
+	}
+	return node.value, nil
+}
+
+func (s *SkipList) getNode(key []byte) (*Node, error) {
 	node := s.head
 	for node != nil {
 		if compareBytes(node.key, key) == 0 {
-			return node.value, nil
+			return node, nil
 		}
 		node = node.next
 	}
@@ -33,6 +41,18 @@ func (s *SkipList) Has(key []byte) (ret bool, err error) {
 		return false, err
 	}
 	return k != nil, nil
+}
+
+func (s *SkipList) Delete(key []byte) error {
+	node, err := s.getNode(key)
+	if err != nil {
+		return err
+	}
+	if node == nil {
+		return nil
+	}
+	node.value = nil
+	return nil
 }
 
 func (s *SkipList) Put(key, value []byte) error {
@@ -66,6 +86,11 @@ func (s *SkipList) Put(key, value []byte) error {
 	}
 	prev.next = &Node{key: key, value: value}
 	return nil
+}
+
+func (s *SkipList) RangeScan(start, limit []byte) (Iterator, error) {
+	// skipping for now
+	return nil, nil
 }
 
 type SkipListIterator struct {
