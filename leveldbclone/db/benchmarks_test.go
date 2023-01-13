@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-const MAX_KEYS = 256 ^ 3 // 16 MB
-
 func keyFromIterator(i int) []byte {
 	return []byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)}
 }
@@ -32,20 +30,20 @@ func BenchmarkFillRandom(b *testing.B) {
 func BenchmarkOverwrite(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
-	for i := 0; i <= MAX_KEYS; i++ {
+	for i := 0; i < b.N; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
 	v2 := []byte("Cadabra")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Put(keyFromIterator(rand.Intn(MAX_KEYS)), v2)
+		mt.Put(keyFromIterator(rand.Intn(b.N)), v2)
 	}
 }
 
 func BenchmarkDeleteSeq(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
-	for i := 0; i <= MAX_KEYS; i++ {
+	for i := 0; i <= b.N; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
 	b.ResetTimer()
@@ -57,19 +55,19 @@ func BenchmarkDeleteSeq(b *testing.B) {
 func BenchmarkDeleteRandom(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
-	for i := 0; i <= MAX_KEYS; i++ {
+	for i := 0; i <= b.N; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Delete(keyFromIterator(rand.Intn(MAX_KEYS)))
+		mt.Delete(keyFromIterator(rand.Intn(b.N)))
 	}
 }
 
 func BenchmarkReadSeq(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
-	for i := 0; i <= MAX_KEYS; i++ {
+	for i := 0; i <= b.N; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
 	b.ResetTimer()
@@ -81,25 +79,76 @@ func BenchmarkReadSeq(b *testing.B) {
 func BenchmarkReadReverse(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
-	for i := 0; i <= MAX_KEYS; i++ {
+	for i := 0; i <= b.N; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Get(keyFromIterator(MAX_KEYS - i))
+		mt.Get(keyFromIterator(b.N - i))
 	}
 }
 
 func BenchmarkReadRandom(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
-	for i := 0; i <= MAX_KEYS; i++ {
+	for i := 0; i <= b.N; i++ {
 		mt.Put(keyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Get(keyFromIterator(rand.Intn(MAX_KEYS)))
+		mt.Get(keyFromIterator(rand.Intn(b.N)))
 	}
+}
+
+func BenchmarkRangeScanNoIteration(b *testing.B) {
+	mt := NewMemTable()
+	v := []byte("World")
+	for i := 0; i <= b.N; i++ {
+		mt.Put(keyFromIterator(i), v)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mt.RangeScan(getRange(b.N))
+	}
+}
+
+func BenchmarkRangeScanWithIteration(b *testing.B) {
+	mt := NewMemTable()
+	v := []byte("World")
+	for i := 0; i <= b.N; i++ {
+		mt.Put(keyFromIterator(i), v)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		iterator, err := mt.RangeScan(getRange(b.N))
+		if err != nil {
+			panic(err)
+		}
+		for iterator.Next() {
+			iterator.Key()
+			iterator.Value()
+		}
+	}
+}
+
+func BenchmarkRangeAndPut(b *testing.B) {
+	mt := NewMemTable()
+	v := []byte("World")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mt.Put(keyFromIterator(i), v)
+		mt.RangeScan(getRange(b.N))
+	}
+}
+
+func getRange(max int) ([]byte, []byte) {
+	start, finish := rand.Intn(max), rand.Intn(max)
+	if finish < start {
+		temp := start
+		start = finish
+		finish = temp
+	}
+	return keyFromIterator(start), keyFromIterator(finish)
 }
 
 // Comma-separated list of operations to run in the specified order
