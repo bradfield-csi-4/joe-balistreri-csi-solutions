@@ -9,7 +9,7 @@ import (
 func TestSkipList(t *testing.T) {
 	t.Run("", func(t *testing.T) {
 		// Simple Put
-		sl := NewSkipList()
+		sl := NewSkipList(MAX_LEVEL)
 		key := []byte("hello")
 		value := []byte("goodbye")
 		err := sl.Put(key, value)
