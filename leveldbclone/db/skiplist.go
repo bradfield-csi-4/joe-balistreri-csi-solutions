@@ -28,31 +28,30 @@ func (s *SkipList) newNode(key, value []byte, next *Node) *Node {
 }
 
 func (s *SkipList) Get(key []byte) (value []byte, err error) {
-	node, err := s.getNode(key, s.head[s.level], s.level)
+	node, err := s.getNode(key)
 	if err != nil || node == nil {
 		return nil, err
 	}
 	return node.value, nil
 }
 
-func (s *SkipList) getNode(key []byte, node *Node, level int) (*Node, error) {
-	var prev *Node
-	for node != nil {
-		switch compareBytes(node.key, key) {
-		case 0:
-			return node, nil
-		case -1:
-			prev = node
-			node = node.next
-			continue
-		case 1:
-			if level == 0 {
-				return nil, nil
+func (s *SkipList) getNode(key []byte) (*Node, error) {
+	level := s.level
+	node := s.head[level]
+
+	for ; level >= 0; level-- {
+	InnerLoop:
+		for node != nil {
+			switch compareBytes(node.key, key) {
+			case 0:
+				return node, nil
+			case -1:
+				node = node.next
+				continue
+			case 1:
+				level--
+				break InnerLoop
 			}
-			if prev == nil {
-				prev = s.head[level-1]
-			}
-			return s.getNode(key, prev, level-1)
 		}
 	}
 	return nil, nil
@@ -67,14 +66,14 @@ func (s *SkipList) Has(key []byte) (ret bool, err error) {
 }
 
 func (s *SkipList) Delete(key []byte) error {
-	// node, err := s.getNode(key)
-	// if err != nil {
-	// 	return err
-	// }
-	// if node == nil {
-	// 	return nil
-	// }
-	// node.value = nil
+	node, err := s.getNode(key)
+	if err != nil {
+		return err
+	}
+	if node == nil {
+		return nil
+	}
+	node.value = nil
 	return nil
 }
 
