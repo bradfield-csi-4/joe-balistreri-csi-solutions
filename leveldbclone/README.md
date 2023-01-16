@@ -9,10 +9,6 @@ Optional:
 Benchmark Results
 
 ** 1/13/23 - In Memory Only - Starting Point **
-    goos: darwin
-    goarch: amd64
-    pkg: github.com/jdbalistreri/bradfield-csi-solutions/leveldbclone/db
-    cpu: VirtualApple @ 2.50GHz
     BenchmarkFillSeqTest-10               	 2947156	       363.9 ns/op	     147 B/op	       2 allocs/op
     BenchmarkFillRandom-10                	 3016215	       350.6 ns/op	     145 B/op	       2 allocs/op
     BenchmarkOverwrite-10                 	 4755320	       349.2 ns/op	       8 B/op	       2 allocs/op
@@ -24,3 +20,16 @@ Benchmark Results
     BenchmarkRangeScanNoIteration-10      	   10000	  10242039 ns/op	 2765429 B/op	   10054 allocs/op
     BenchmarkRangeScanWithIteration-10    	   10000	  10361215 ns/op	 2759549 B/op	   10054 allocs/op
     BenchmarkRangeAndPut-10               	   10000	   4566075 ns/op	 1331528 B/op	    5042 allocs/op
+
+** 1/16/23 - Linked List **
+    BenchmarkFillSeqTest-10               	   59344	    113802 ns/op	      68 B/op	       2 allocs/op
+    BenchmarkFillRandom-10                	   62784	    120517 ns/op	      68 B/op	       2 allocs/op
+    BenchmarkOverwrite-10                 	   61996	    119040 ns/op	       4 B/op	       1 allocs/op
+    BenchmarkDeleteSeq-10                 	   61534	    118228 ns/op	       4 B/op	       1 allocs/op
+    BenchmarkDeleteRandom-10              	   62212	    120112 ns/op	       4 B/op	       1 allocs/op
+    BenchmarkReadSeq-10                   	   61818	    119047 ns/op	       4 B/op	       1 allocs/op
+    BenchmarkReadReverse-10               	   62358	    119808 ns/op	       4 B/op	       1 allocs/op
+    BenchmarkReadRandom-10                	   62943	    120758 ns/op	       4 B/op	       1 allocs/op
+    BenchmarkRangeScanNoIteration-10      	   97008	    113425 ns/op	      40 B/op	       3 allocs/op
+    BenchmarkRangeScanWithIteration-10    	   31520	    117309 ns/op	      40 B/op	       3 allocs/op
+    BenchmarkRangeAndPut-10               	   41062	    117173 ns/op	     108 B/op	       5 allocs/op
