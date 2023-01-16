@@ -1,30 +1,63 @@
 package db
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+)
 
 const MAX_LEVEL = 16
+const p = 1.0 / 3.0
 
 type SkipList struct {
-	head     []*Node
-	maxLevel int
-	level    int
+	head                []*Node
+	maxLevel            int
+	level               int
+	PredeterminedLevels []int
+	plIndex             int
 }
 
 type Node struct {
-	key   []byte
-	value []byte
-	next  *Node
+	key     []byte
+	value   []byte
+	next    []*Node
+	special byte
 }
+
+const MIN_NODE = 1
+const MAX_NODE = 2
 
 func NewSkipList(maxLevel int) SkipList {
-	return SkipList{
+	s := SkipList{
 		maxLevel: maxLevel,
-		head:     make([]*Node, maxLevel),
 	}
+	levels := make([]*Node, maxLevel)
+	min := s.newNode(nil, nil)
+	min.special = MIN_NODE
+	max := s.newNode(nil, nil)
+	max.special = MAX_NODE
+	for i := 0; i < maxLevel; i++ {
+		levels[i] = min
+		min.next[i] = max
+	}
+	s.head = levels
+	return s
 }
 
-func (s *SkipList) newNode(key, value []byte, next *Node) *Node {
-	return &Node{key: key, value: value, next: next}
+func (s *SkipList) newNode(key, value []byte) *Node {
+	return &Node{key: key, value: value, next: make([]*Node, s.maxLevel)}
+}
+
+func (s *SkipList) randomLevel() int {
+	if len(s.PredeterminedLevels) > s.plIndex {
+		r := s.PredeterminedLevels[s.plIndex]
+		s.plIndex++
+		return r
+	}
+	var level int
+	for rand.Float64() < p && level < s.maxLevel {
+		level++
+	}
+	return level
 }
 
 func (s *SkipList) Get(key []byte) (value []byte, err error) {
@@ -46,7 +79,7 @@ func (s *SkipList) getNode(key []byte) (*Node, error) {
 			case 0:
 				return node, nil
 			case -1:
-				node = node.next
+				node = node.next[level]
 				continue
 			case 1:
 				level--
@@ -77,36 +110,51 @@ func (s *SkipList) Delete(key []byte) error {
 	return nil
 }
 
-func (s *SkipList) Put(key, value []byte) error {
-	if s.head[0] == nil {
-		s.head[0] = s.newNode(key, value, nil)
-		return nil
-	}
-	node := s.head[0]
-	var prev *Node
-	for node != nil {
-		c := compareBytes(node.key, key)
-		switch c {
-		case -1:
-			prev = node
-			node = node.next
+func (s *SkipList) Print() {
+	for i := s.level; i >= 0; i-- {
+		if s.head[i] == nil {
+			fmt.Println("nil")
 			continue
-		case 1:
-			newNode := s.newNode(key, value, node)
-			if prev != nil {
-				prev.next = newNode
-			} else {
-				s.head[0] = newNode
+		}
+		node := s.head[i]
+		for node != nil {
+			fmt.Printf("(%s: %s) -> ", string(node.key), string(node.value))
+			node = node.next[i]
+		}
+		fmt.Println()
+	}
+}
+
+func (s *SkipList) Put(key, value []byte) error {
+	level := s.level
+	node := s.head[level]
+	updates := make([]*Node, s.maxLevel)
+
+	for ; level >= 0; level-- {
+		for node.next[level] != nil && compareBytes(node.next[level].key, key) == -1 && node.next[level].special != MAX_NODE {
+			node = node.next[level]
+		}
+		updates[level] = node
+	}
+	node = node.next[0]
+
+	if compareBytes(node.key, key) == 0 {
+		node.value = value
+	} else {
+		newLevel := s.randomLevel()
+		if newLevel > s.level {
+			for i := s.level + 1; i <= newLevel; i++ {
+				updates[i] = s.head[i]
 			}
-			return nil
-		case 0:
-			node.value = value
-			return nil
-		default:
-			panic(fmt.Sprintf("unexpected condition %d for %s and %s", c, node.key, key))
+			s.level = newLevel
+		}
+		newNode := s.newNode(key, value)
+		for i := 0; i <= newLevel; i++ {
+			newNode.next[i] =
+				updates[i].next[i]
+			updates[i].next[i] = newNode
 		}
 	}
-	prev.next = s.newNode(key, value, nil)
 	return nil
 }
 
