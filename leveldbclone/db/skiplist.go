@@ -26,7 +26,11 @@ type Node struct {
 const MIN_NODE = 1
 const MAX_NODE = 2
 
-func NewSkipList(maxLevel int) SkipList {
+func NewSkipList() DB {
+	return newSkipList(MAX_LEVEL)
+}
+
+func newSkipList(maxLevel int) DB {
 	s := SkipList{
 		maxLevel: maxLevel,
 	}
@@ -40,7 +44,7 @@ func NewSkipList(maxLevel int) SkipList {
 		min.next[i] = max
 	}
 	s.head = levels
-	return s
+	return &s
 }
 
 func (s *SkipList) newNode(key, value []byte) *Node {
@@ -62,10 +66,26 @@ func (s *SkipList) randomLevel() int {
 
 func (s *SkipList) Get(key []byte) (value []byte, err error) {
 	node, err := s.getNode(key)
-	if err != nil || node == nil {
+	if err != nil {
 		return nil, err
 	}
+	if node == nil || node.value == nil {
+		return nil, &NotFoundError{}
+	}
 	return node.value, nil
+}
+
+func (s *SkipList) getStart(key []byte) (*Node, error) {
+	level := s.level
+	node := s.head[level]
+
+	for ; level >= 0; level-- {
+		for compareBytes(node.next[level].key, key) == -1 {
+			node = node.next[level]
+		}
+		level--
+	}
+	return node.next[0], nil
 }
 
 func (s *SkipList) getNode(key []byte) (*Node, error) {
@@ -93,6 +113,9 @@ func (s *SkipList) getNode(key []byte) (*Node, error) {
 func (s *SkipList) Has(key []byte) (ret bool, err error) {
 	k, err := s.Get(key)
 	if err != nil {
+		if _, ok := err.(*NotFoundError); ok {
+			return false, nil
+		}
 		return false, err
 	}
 	return k != nil, nil
@@ -160,14 +183,34 @@ func (s *SkipList) Put(key, value []byte) error {
 
 func (s *SkipList) RangeScan(start, limit []byte) (Iterator, error) {
 	// skipping for now
-	return nil, nil
+	node, err := s.getStart(start)
+	if err != nil {
+		return nil, err
+	}
+	return &SkipListIterator{node: node, limit: limit}, nil
 }
 
 type SkipListIterator struct {
+	node  *Node
+	limit []byte
 }
 
 func (m *SkipListIterator) Next() bool {
-	return false
+	// skip deleted nodes
+	for m.node != nil && m.node.next[0] != nil && m.node.next[0].value == nil {
+		m.node = m.node.next[0]
+	}
+
+	if m.node == nil || m.node.next[0] == nil {
+		m.node = nil
+		return false
+	}
+	if compareBytes(m.node.next[0].key, m.limit) == 1 {
+		m.node = nil
+		return false
+	}
+	m.node = m.node.next[0]
+	return true
 }
 
 func (m *SkipListIterator) Error() error {
@@ -175,9 +218,15 @@ func (m *SkipListIterator) Error() error {
 }
 
 func (m *SkipListIterator) Key() []byte {
-	return nil
+	if m.node == nil {
+		return nil
+	}
+	return m.node.key
 }
 
 func (m *SkipListIterator) Value() []byte {
-	return nil
+	if m.node == nil {
+		return nil
+	}
+	return m.node.value
 }

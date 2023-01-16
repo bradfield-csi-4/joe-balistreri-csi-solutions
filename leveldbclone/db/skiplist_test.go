@@ -9,7 +9,7 @@ import (
 func TestSkipList(t *testing.T) {
 	t.Run("", func(t *testing.T) {
 		// Simple Put
-		sl := NewSkipList(MAX_LEVEL)
+		sl := NewSkipList()
 		key := []byte("hello")
 		value := []byte("goodbye")
 		err := sl.Put(key, value)
@@ -22,7 +22,7 @@ func TestSkipList(t *testing.T) {
 
 		// Get not found
 		res, err = sl.Get([]byte("not here"))
-		So(t, should.BeNil(err))
+		So(t, should.NotBeNil(err))
 		So(t, should.BeNil(res))
 
 		// Put at end of range
