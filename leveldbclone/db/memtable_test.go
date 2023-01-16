@@ -13,7 +13,7 @@ func So(t *testing.T, s string) {
 	}
 }
 
-var NewMemTable = NewMemTableV1
+var NewMemTable = NewLinkedList
 
 func TestMemTable(t *testing.T) {
 	t.Run("Has, Put, and Get work as expected", func(t *testing.T) {
