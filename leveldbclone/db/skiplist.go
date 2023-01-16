@@ -5,7 +5,7 @@ import (
 	"math/rand"
 )
 
-const MAX_LEVEL = 16
+const MAX_LEVEL = 24
 const p = 1.0 / 3.0
 
 type SkipList struct {
@@ -34,7 +34,7 @@ func newSkipList(maxLevel int) DB {
 	s := SkipList{
 		maxLevel: maxLevel,
 	}
-	levels := make([]*Node, maxLevel)
+	levels := make([]*Node, maxLevel+1)
 	min := s.newNode(nil, nil)
 	min.special = MIN_NODE
 	max := s.newNode(nil, nil)
@@ -48,7 +48,7 @@ func newSkipList(maxLevel int) DB {
 }
 
 func (s *SkipList) newNode(key, value []byte) *Node {
-	return &Node{key: key, value: value, next: make([]*Node, s.maxLevel)}
+	return &Node{key: key, value: value, next: make([]*Node, s.maxLevel+1)}
 }
 
 func (s *SkipList) randomLevel() int {
@@ -80,7 +80,7 @@ func (s *SkipList) getStart(key []byte) (*Node, error) {
 	node := s.head[level]
 
 	for ; level >= 0; level-- {
-		for compareBytes(node.next[level].key, key) == -1 {
+		for node.next[level] != nil && compareBytes(node.next[level].key, key) == -1 {
 			node = node.next[level]
 		}
 		level--
