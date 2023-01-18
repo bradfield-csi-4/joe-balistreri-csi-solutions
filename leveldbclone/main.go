@@ -41,8 +41,9 @@ func main() {
 
 	// sl.Print()
 
-	d := db.NewKVStore("hello")
-	v, err := d.Get([]byte("snail"))
-	fmt.Println(err)
-	fmt.Println(string(v))
+	d := db.NewKVStore("example")
+	r, _ := d.Get([]byte("key1"))
+	fmt.Println(string(r))
+	// d.Put([]byte("key2"), []byte("value2"))
+	// d.Put([]byte("key1"), []byte("value3"))
 }
