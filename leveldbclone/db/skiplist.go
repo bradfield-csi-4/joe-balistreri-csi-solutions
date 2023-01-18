@@ -80,10 +80,9 @@ func (s *SkipList) getStart(key []byte) (*Node, error) {
 	node := s.head[level]
 
 	for ; level >= 0; level-- {
-		for node.next[level] != nil && compareBytes(node.next[level].key, key) == -1 {
+		for node.next[level] != nil && compareBytes(node.next[level].key, key) == -1 && node.next[level].special != MAX_NODE {
 			node = node.next[level]
 		}
-		level--
 	}
 	return node.next[0], nil
 }
@@ -94,15 +93,14 @@ func (s *SkipList) getNode(key []byte) (*Node, error) {
 
 	for ; level >= 0; level-- {
 	InnerLoop:
-		for node != nil {
-			switch compareBytes(node.key, key) {
+		for node != nil && node.next[level] != nil {
+			switch compareBytes(node.next[level].key, key) {
 			case 0:
-				return node, nil
+				return node.next[level], nil
 			case -1:
 				node = node.next[level]
 				continue
 			case 1:
-				level--
 				break InnerLoop
 			}
 		}
@@ -182,7 +180,6 @@ func (s *SkipList) Put(key, value []byte) error {
 }
 
 func (s *SkipList) RangeScan(start, limit []byte) (Iterator, error) {
-	// skipping for now
 	node, err := s.getStart(start)
 	if err != nil {
 		return nil, err

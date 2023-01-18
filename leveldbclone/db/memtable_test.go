@@ -1,6 +1,9 @@
 package db
 
 import (
+	"fmt"
+	"math/rand"
+	"os/exec"
 	"testing"
 
 	"github.com/smartystreets/assertions/should"
@@ -13,7 +16,26 @@ func So(t *testing.T, s string) {
 	}
 }
 
-var NewMemTable = NewSkipList
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+var NewMemTable = func() DB {
+	return NewKVStore(randSeq(6) + "test")
+}
+
+// var NewMemTable = NewSkipList
+
+func TestMain(m *testing.M) {
+	m.Run()
+	fmt.Println(exec.Command("bash", "-c", "rm *test.wal").Run())
+}
 
 func TestMemTable(t *testing.T) {
 	t.Run("Has, Put, and Get work as expected", func(t *testing.T) {

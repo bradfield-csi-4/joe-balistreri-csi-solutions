@@ -42,7 +42,8 @@ func TestSkipList(t *testing.T) {
 
 		// Overwrite
 		sl.Put([]byte("hello"), []byte("again"))
-		res, _ = sl.Get([]byte("hello"))
+		res, err = sl.Get([]byte("hello"))
+		So(t, should.BeNil(err))
 		So(t, should.Resemble(res, []byte("again")))
 		res, _ = sl.Get([]byte("abc"))
 		So(t, should.Resemble(res, []byte("def")))
