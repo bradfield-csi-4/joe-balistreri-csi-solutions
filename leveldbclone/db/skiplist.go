@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"math/rand"
+	"os"
 )
 
 const MAX_LEVEL = 24
@@ -14,6 +15,7 @@ type SkipList struct {
 	level               int
 	PredeterminedLevels []int
 	plIndex             int
+	sizeBytes           int
 }
 
 type Node struct {
@@ -26,11 +28,11 @@ type Node struct {
 const MIN_NODE = 1
 const MAX_NODE = 2
 
-func NewSkipList() DB {
+func NewSkipList() *SkipList {
 	return newSkipList(MAX_LEVEL)
 }
 
-func newSkipList(maxLevel int) DB {
+func newSkipList(maxLevel int) *SkipList {
 	s := SkipList{
 		maxLevel: maxLevel,
 	}
@@ -45,6 +47,11 @@ func newSkipList(maxLevel int) DB {
 	}
 	s.head = levels
 	return &s
+}
+
+func (s *SkipList) flushSSTable(f *os.File) error {
+	// flush to an SS Table
+	return nil
 }
 
 func (s *SkipList) newNode(key, value []byte) *Node {
@@ -127,6 +134,7 @@ func (s *SkipList) Delete(key []byte) error {
 	if node == nil {
 		return nil
 	}
+	s.sizeBytes -= len(node.value)
 	node.value = nil
 	return nil
 }
@@ -160,6 +168,7 @@ func (s *SkipList) Put(key, value []byte) error {
 	node = node.next[0]
 
 	if compareBytes(node.key, key) == 0 {
+		s.sizeBytes += len(value) - len(node.value)
 		node.value = value
 	} else {
 		newLevel := s.randomLevel()
@@ -175,8 +184,13 @@ func (s *SkipList) Put(key, value []byte) error {
 				updates[i].next[i]
 			updates[i].next[i] = newNode
 		}
+		s.sizeBytes += len(key) + len(value)
 	}
 	return nil
+}
+
+func (s *SkipList) SizeBytes() int {
+	return s.sizeBytes
 }
 
 func (s *SkipList) RangeScan(start, limit []byte) (Iterator, error) {

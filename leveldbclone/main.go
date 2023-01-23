@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/jdbalistreri/bradfield-csi-solutions/leveldbclone/db"
 )
 
@@ -41,9 +39,8 @@ func main() {
 
 	// sl.Print()
 
-	d := db.NewKVStore("example")
-	r, _ := d.Get([]byte("key1"))
-	fmt.Println(string(r))
-	// d.Put([]byte("key2"), []byte("value2"))
-	// d.Put([]byte("key1"), []byte("value3"))
+	d := db.NewKVStore("example3")
+	d.Put([]byte("key2"), []byte("value2"))
+	d.Put([]byte("key1"), []byte("value3"))
+	d.Put([]byte("key1"), []byte("1"))
 }

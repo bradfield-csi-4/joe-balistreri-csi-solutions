@@ -1,5 +1,7 @@
 package db
 
+import "fmt"
+
 func NewKVStore(name string) DB {
 	store := &KVStore{
 		memtable: NewSkipList(),
@@ -24,7 +26,7 @@ func NewKVStore(name string) DB {
 }
 
 type KVStore struct {
-	memtable DB
+	memtable *SkipList
 	wal      WriteAheadLog
 	name     string
 }
@@ -42,7 +44,11 @@ func (k *KVStore) Delete(key []byte) error {
 	if err != nil {
 		return err
 	}
-	return k.memtable.Delete(key)
+	err = k.memtable.Delete(key)
+	if err != nil {
+		return err
+	}
+	return k.checkAndHandleFlush()
 }
 
 func (k *KVStore) Put(key, value []byte) error {
@@ -50,7 +56,16 @@ func (k *KVStore) Put(key, value []byte) error {
 	if err != nil {
 		return err
 	}
-	return k.memtable.Put(key, value)
+	err = k.memtable.Put(key, value)
+	if err != nil {
+		return err
+	}
+	return k.checkAndHandleFlush()
+}
+
+func (k *KVStore) checkAndHandleFlush() error {
+	fmt.Printf("memtable is %d bytes large\n", k.memtable.SizeBytes())
+	return nil
 }
 
 func (k *KVStore) RangeScan(start, limit []byte) (Iterator, error) {
