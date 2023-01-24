@@ -6,14 +6,22 @@ import (
 	"os"
 )
 
-func NewWriteAheadLog(filename string) WriteAheadLog {
-	return WriteAheadLog{
+func NewWriteAheadLog(filename string) (WriteAheadLog, func()) {
+	w := WriteAheadLog{
 		filename: filename,
 	}
+	return w, w.Close
 }
 
 type WriteAheadLog struct {
 	filename string
+}
+
+func (w *WriteAheadLog) Close() {}
+
+func (w *WriteAheadLog) Truncate() error {
+	// TODO: make sure we don't delete the file while there's a currently open iterator
+	return os.Remove(w.filename)
 }
 
 func (w *WriteAheadLog) Write(key, value []byte) error {
@@ -23,18 +31,7 @@ func (w *WriteAheadLog) Write(key, value []byte) error {
 	}
 	defer f.Close()
 
-	var logLine []byte
-
-	keySize := make([]byte, 4)
-	valueSize := make([]byte, 4)
-	binary.LittleEndian.PutUint32(keySize, uint32(len(key)))
-	binary.LittleEndian.PutUint32(valueSize, uint32(len(value)))
-
-	logLine = append(logLine, keySize...)
-	logLine = append(logLine, valueSize...)
-	logLine = append(logLine, key...)
-	logLine = append(logLine, value...)
-
+	logLine := toLogLine(key, value)
 	n, err := f.Write(logLine)
 	if err != nil {
 		return err
@@ -47,6 +44,22 @@ func (w *WriteAheadLog) Write(key, value []byte) error {
 		return err
 	}
 	return nil
+}
+
+func toLogLine(key, value []byte) []byte {
+	var logLine []byte
+
+	keySize := make([]byte, 4)
+	valueSize := make([]byte, 4)
+	binary.LittleEndian.PutUint32(keySize, uint32(len(key)))
+	binary.LittleEndian.PutUint32(valueSize, uint32(len(value)))
+
+	logLine = append(logLine, keySize...)
+	logLine = append(logLine, valueSize...)
+	logLine = append(logLine, key...)
+	logLine = append(logLine, value...)
+
+	return logLine
 }
 
 func (k *WriteAheadLog) Iterator() (Iterator, error) {

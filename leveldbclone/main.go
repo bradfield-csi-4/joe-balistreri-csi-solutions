@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/jdbalistreri/bradfield-csi-solutions/leveldbclone/db"
 )
 
@@ -17,9 +19,9 @@ func main() {
 	// rand.Seed(time.Now().UnixNano())
 
 	// sl := db.NewSkipList(db.MAX_LEVEL)
-	// // sl.PredeterminedLevels = []int{0, 1, 0, 0, 2, 1, 2, 3}
-	// sl.Put([]byte("hello"), []byte("goodbye"))
-	// sl.Put([]byte("apple"), []byte("pie"))
+	// // d.PredeterminedLevels = []int{0, 1, 0, 0, 2, 1, 2, 3}
+	// d.Put([]byte("hello"), []byte("goodbye"))
+	// d.Put([]byte("apple"), []byte("pie"))
 	// sl.Put([]byte("aaa"), []byte("cake"))
 	// sl.Put([]byte("bvb"), []byte("cake"))
 	// sl.Put([]byte("ababaaa"), []byte("cake"))
@@ -27,20 +29,27 @@ func main() {
 	// sl.Put([]byte("chewie"), []byte("boy"))
 	// sl.Put([]byte("apple"), []byte("cry"))
 	// sl.Put([]byte("apple"), []byte("cry"))
-	// sl.Put([]byte("jiuce"), []byte("juice"))
-	// sl.Put([]byte("juicy"), []byte("juice"))
-	// sl.Put([]byte("change"), []byte("juice"))
-	// sl.Put([]byte("bang"), []byte("juice"))
-	// sl.Put([]byte("alpha"), []byte("juice"))
-	// sl.Put([]byte("jiuce"), []byte("juice"))
-	// sl.Put([]byte("crazy"), []byte("juice"))
-	// sl.Put([]byte("casdfasdfrazy"), []byte("juice"))
-	// sl.Put([]byte("asdf"), []byte("juice"))
 
 	// sl.Print()
 
-	d := db.NewKVStore("example3")
+	d, done := db.NewKVStore("example3")
+	defer done()
+
 	d.Put([]byte("key2"), []byte("value2"))
 	d.Put([]byte("key1"), []byte("value3"))
 	d.Put([]byte("key1"), []byte("1"))
+	d.Put([]byte("jiuce"), []byte("juice"))
+	d.Put([]byte("juicy"), []byte("juice"))
+	d.Put([]byte("change"), []byte("juice"))
+	d.Put([]byte("bang"), []byte("juice"))
+	d.Put([]byte("alpha"), []byte("juice"))
+	d.Put([]byte("jiuce"), []byte("juice"))
+	d.Put([]byte("crazy"), []byte("juice"))
+	d.Put([]byte("casdfasdfrazy"), []byte("juice"))
+	d.Put([]byte("asdf"), []byte("juice"))
+
+	i, _ := d.RangeScan(nil, nil)
+	for i.Next() {
+		fmt.Println(string(i.Key()), string(i.Value()))
+	}
 }
