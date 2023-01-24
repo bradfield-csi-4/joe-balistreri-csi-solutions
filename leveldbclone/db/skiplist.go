@@ -1,16 +1,12 @@
 package db
 
 import (
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"math/rand"
-	"os"
 )
 
 const MAX_LEVEL = 24
 const p = 1.0 / 3.0
-const SSTABLE_INDEX_INCR_BYTES = 400 // 10% of the SSTable size
 
 type SkipList struct {
 	head                []*Node
@@ -55,54 +51,6 @@ func newSkipList(maxLevel int) *SkipList {
 type indexEntry struct {
 	key    string
 	offset int
-}
-
-func (s *SkipList) flushSSTable(f *os.File) error {
-	var fileContents []byte
-
-	i, err := s.RangeScan(nil, nil)
-	if err != nil {
-		return err
-	}
-
-	var index []indexEntry
-	var currBytes int
-	for i.Next() {
-		// append to file contents
-		nextLine := toLogLine(i.Key(), i.Value())
-		currBytes += len(i.Key()) + len(i.Value())
-		fileContents = append(fileContents, nextLine...)
-
-		// append to index
-		if currBytes > SSTABLE_INDEX_INCR_BYTES {
-			index = append(index, indexEntry{key: string(i.Key()), offset: len(fileContents)})
-			currBytes = 0
-		}
-	}
-
-	marshalledIndex, err := json.Marshal(index)
-	if err != nil {
-		return err
-	}
-	indexOffset := len(fileContents) + 4
-	indexOffsetEncoded := make([]byte, 4)
-	binary.LittleEndian.PutUint32(indexOffsetEncoded, uint32(indexOffset))
-	fileContents = append(indexOffsetEncoded, fileContents...)
-	fileContents = append(fileContents, marshalledIndex...)
-
-	// write to disc and flush
-	n, err := f.Write(fileContents)
-	if err != nil {
-		return err
-	}
-	if n != len(fileContents) {
-		return fmt.Errorf("wrote %d bytes but expected to write %d", n, len(fileContents))
-	}
-	err = f.Sync()
-	if err == nil {
-		return err
-	}
-	return nil
 }
 
 func (s *SkipList) newNode(key, value []byte) *Node {

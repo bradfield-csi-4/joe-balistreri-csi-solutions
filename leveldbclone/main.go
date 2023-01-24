@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/jdbalistreri/bradfield-csi-solutions/leveldbclone/db"
 )
@@ -32,24 +32,30 @@ func main() {
 
 	// sl.Print()
 
-	d, done := db.NewKVStore("example3")
+	d, done := db.NewKVStore("example5")
 	defer done()
 
-	d.Put([]byte("key2"), []byte("value2"))
-	d.Put([]byte("key1"), []byte("value3"))
-	d.Put([]byte("key1"), []byte("1"))
-	d.Put([]byte("jiuce"), []byte("juice"))
-	d.Put([]byte("juicy"), []byte("juice"))
-	d.Put([]byte("change"), []byte("juice"))
-	d.Put([]byte("bang"), []byte("juice"))
-	d.Put([]byte("alpha"), []byte("juice"))
-	d.Put([]byte("jiuce"), []byte("juice"))
-	d.Put([]byte("crazy"), []byte("juice"))
-	d.Put([]byte("casdfasdfrazy"), []byte("juice"))
-	d.Put([]byte("asdf"), []byte("juice"))
+	v := []byte("stringbean")
 
-	i, _ := d.RangeScan(nil, nil)
-	for i.Next() {
-		fmt.Println(string(i.Key()), string(i.Value()))
+	for i := 0; i < 500; i++ {
+		d.Put(db.KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
 	}
+
+	// d.Put([]byte("key2"), []byte("value2"))
+	// d.Put([]byte("key1"), []byte("value3"))
+	// d.Put([]byte("key1"), []byte("1"))
+	// d.Put([]byte("jiuce"), []byte("juice"))
+	// d.Put([]byte("juicy"), []byte("juice"))
+	// d.Put([]byte("change"), []byte("juice"))
+	// d.Put([]byte("bang"), []byte("juice"))
+	// d.Put([]byte("alpha"), []byte("juice"))
+	// d.Put([]byte("jiuce"), []byte("juice"))
+	// d.Put([]byte("crazy"), []byte("juice"))
+	// d.Put([]byte("casdfasdfrazy"), []byte("juice"))
+	// d.Put([]byte("asdf"), []byte("juice"))
+
+	// i, _ := d.RangeScan(nil, nil)
+	// for i.Next() {
+	// 	fmt.Println(string(i.Key()), string(i.Value()))
+	// }
 }

@@ -7,16 +7,12 @@ import (
 
 const MAX_DB_SIZE = 1000
 
-func keyFromIterator(i int) []byte {
-	return []byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)}
-}
-
 func BenchmarkFillSeqTest(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 }
 
@@ -25,7 +21,7 @@ func BenchmarkFillRandom(b *testing.B) {
 	v := []byte("World")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 }
 
@@ -33,12 +29,12 @@ func BenchmarkOverwrite(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	for i := 0; i < MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 	v2 := []byte("Cadabra")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Put(keyFromIterator(rand.Intn(b.N)), v2)
+		mt.Put(KeyFromIterator(rand.Intn(b.N)), v2)
 	}
 }
 
@@ -46,11 +42,11 @@ func BenchmarkDeleteSeq(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Delete(keyFromIterator(i))
+		mt.Delete(KeyFromIterator(i))
 	}
 }
 
@@ -58,11 +54,11 @@ func BenchmarkDeleteRandom(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Delete(keyFromIterator(rand.Intn(b.N)))
+		mt.Delete(KeyFromIterator(rand.Intn(b.N)))
 	}
 }
 
@@ -70,11 +66,11 @@ func BenchmarkReadSeq(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Get(keyFromIterator(i))
+		mt.Get(KeyFromIterator(i))
 	}
 }
 
@@ -82,11 +78,11 @@ func BenchmarkReadReverse(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Get(keyFromIterator(b.N - i))
+		mt.Get(KeyFromIterator(b.N - i))
 	}
 }
 
@@ -94,11 +90,11 @@ func BenchmarkReadRandom(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mt.Get(keyFromIterator(rand.Intn(b.N)))
+		mt.Get(KeyFromIterator(rand.Intn(b.N)))
 	}
 }
 
@@ -106,7 +102,7 @@ func BenchmarkRangeScanNoIteration(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -118,7 +114,7 @@ func BenchmarkRangeScanWithIteration(b *testing.B) {
 	mt := NewMemTable()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -138,7 +134,7 @@ func BenchmarkRangeAndPut(b *testing.B) {
 	v := []byte("World")
 	b.ResetTimer()
 	for i := 0; i < MAX_DB_SIZE; i++ {
-		mt.Put(keyFromIterator(i), v)
+		mt.Put(KeyFromIterator(i), v)
 		mt.RangeScan(getRange(b.N))
 	}
 }
@@ -150,7 +146,7 @@ func getRange(max int) ([]byte, []byte) {
 		start = finish
 		finish = temp
 	}
-	return keyFromIterator(start), keyFromIterator(finish)
+	return KeyFromIterator(start), KeyFromIterator(finish)
 }
 
 // Comma-separated list of operations to run in the specified order
