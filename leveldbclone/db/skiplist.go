@@ -48,11 +48,6 @@ func newSkipList(maxLevel int) *SkipList {
 	return &s
 }
 
-type indexEntry struct {
-	key    string
-	offset int
-}
-
 func (s *SkipList) newNode(key, value []byte) *Node {
 	return &Node{key: key, value: value, next: make([]*Node, s.maxLevel+1)}
 }

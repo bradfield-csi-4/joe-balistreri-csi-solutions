@@ -1,8 +1,9 @@
 package db
 
 import (
+	"bytes"
 	"encoding/binary"
-	"encoding/json"
+	"encoding/gob"
 	"fmt"
 	"os"
 )
@@ -11,13 +12,22 @@ const MAX_MEMTABLE_SIZE_BYTES = 4096 // matches usual OS page size; randomly cho
 const SSTABLE_INDEX_INCR_BYTES = 400 // 10% of the SSTable size
 
 func NewKVStore(name string) (DB, func()) {
-	wal, wDone := NewWriteAheadLog(name + ".wal")
 	store := &KVStore{
 		memtable:             NewSkipList(),
 		name:                 name,
-		wal:                  wal,
 		maxMemtableSizeBytes: MAX_MEMTABLE_SIZE_BYTES,
 	}
+	var ssTable *SSTable
+	if fileExists(store.ssTableFilename()) {
+		f, err := os.Open(store.ssTableFilename())
+		if err != nil {
+			panic(err)
+		}
+		ssTable = LoadSSTable(f)
+	}
+	wal, wDone := NewWriteAheadLog(name + ".wal")
+	store.wal = wal
+	store.ssTable = ssTable
 	i, err := store.wal.Iterator()
 	if err != nil {
 		panic(err)
@@ -28,7 +38,6 @@ func NewKVStore(name string) (DB, func()) {
 		if v == nil {
 			store.memtable.Delete(k)
 		} else {
-
 			store.memtable.Put(k, v)
 		}
 	}
@@ -43,7 +52,7 @@ type KVStore struct {
 	wal                  WriteAheadLog
 	name                 string
 	maxMemtableSizeBytes int
-	ssTable              *os.File
+	ssTable              *SSTable
 }
 
 func (k *KVStore) Get(key []byte) (value []byte, err error) {
@@ -86,33 +95,37 @@ func (k *KVStore) flushSSTable(f *os.File) error {
 		return err
 	}
 
-	var index []indexEntry
+	var index []IndexEntry
 	var currBytes int
+	var firstKey *[]byte
 	for i.Next() {
 		// append to file contents
+		if firstKey == nil {
+			k := i.Key()
+			firstKey = &k
+		}
 		nextLine := toLogLine(i.Key(), i.Value())
-		currBytes += len(i.Key()) + len(i.Value())
+		currBytes += len(nextLine)
 		fileContents = append(fileContents, nextLine...)
 
 		// append to index
 		if currBytes > SSTABLE_INDEX_INCR_BYTES {
-			fmt.Println("adding index entry")
-			index = append(index, indexEntry{key: string(i.Key()), offset: len(fileContents)})
+			index = append(index, IndexEntry{Key: *firstKey, Offset: len(fileContents) - currBytes, Length: currBytes})
 			currBytes = 0
+			firstKey = nil
 		}
 	}
 
 	fmt.Printf("index is %+v\n", index)
-	marshalledIndex, err := json.Marshal(index)
-	if err != nil {
-		return err
-	}
+	b := &bytes.Buffer{}
+	gob.NewEncoder(b).Encode(index)
+
 	indexOffset := len(fileContents) + 4
-	fmt.Println("index offset is %d", indexOffset)
+	fmt.Printf("index offset is %d\n", indexOffset)
 	indexOffsetEncoded := make([]byte, 4)
 	binary.LittleEndian.PutUint32(indexOffsetEncoded, uint32(indexOffset))
 	fileContents = append(indexOffsetEncoded, fileContents...)
-	fileContents = append(fileContents, marshalledIndex...)
+	fileContents = append(fileContents, b.Bytes()...)
 
 	// write to disc and flush
 	n, err := f.Write(fileContents)
@@ -129,6 +142,18 @@ func (k *KVStore) flushSSTable(f *os.File) error {
 	return nil
 }
 
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func (k *KVStore) ssTableFilename() string {
+	return k.name + ".sst"
+}
+
 func (k *KVStore) checkAndHandleFlush() error {
 	// check the size of the memtable
 	if k.memtable.SizeBytes() <= k.maxMemtableSizeBytes {
@@ -136,21 +161,26 @@ func (k *KVStore) checkAndHandleFlush() error {
 	}
 	fmt.Printf("memtable is %d bytes large, need to flush\n", k.memtable.SizeBytes())
 
-	// create the SSTable file (and overwrite the old one - will fix that later)
-	f, err := os.OpenFile(k.name+".sst", os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	k.ssTable = f
+	if fileExists(k.ssTableFilename()) {
+		fmt.Println("SSTable already exists! Dropping the in memory values for now")
+	} else {
+		// create the SSTable file (and overwrite the old one - will fix that later)
+		f, err := os.OpenFile(k.ssTableFilename(), os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			return err
+		}
 
-	// call flush on the memtable
-	err = k.flushSSTable(f)
-	if err != nil {
-		return err
+		// call flush on the memtable
+		err = k.flushSSTable(f)
+		if err != nil {
+			return err
+		}
+		f.Seek(0, 0)
+		k.ssTable = LoadSSTable(f)
 	}
 
 	// clear the writeahead log
-	err = k.wal.Truncate()
+	err := k.wal.Truncate()
 	if err != nil {
 		return err
 	}
