@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/jdbalistreri/bradfield-csi-solutions/leveldbclone/db"
@@ -32,14 +33,21 @@ func main() {
 
 	// sl.Print()
 
-	d, done := db.NewKVStore("example5")
-	defer done()
+	// d, done := db.NewKVStore("example5")
+	d := db.NewSkipList()
+	// defer done()
 
 	v := []byte("stringbean")
 
 	for i := 0; i < 500; i++ {
 		d.Put(db.KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
 	}
+
+	d.Print()
+
+	v, err := d.Get(db.KeyFromIterator(498))
+	fmt.Println(string(v))
+	fmt.Println(err)
 
 	// d.Put([]byte("key2"), []byte("value2"))
 	// d.Put([]byte("key1"), []byte("value3"))

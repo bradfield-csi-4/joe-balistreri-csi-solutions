@@ -1,12 +1,25 @@
 package db
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/smartystreets/assertions/should"
 )
 
 func TestSkipList(t *testing.T) {
+	t.Run("should handle KeyFromIterator", func(t *testing.T) {
+		d := NewSkipList()
+		v := []byte("stringbean")
+
+		for i := 0; i < 500; i++ {
+			d.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
+		}
+
+		v, err := d.Get(KeyFromIterator(498))
+		So(t, should.Resemble(string(v), "stringbean498"))
+		So(t, should.BeNil(err))
+	})
 	t.Run("", func(t *testing.T) {
 		// Simple Put
 		sl := NewSkipList()

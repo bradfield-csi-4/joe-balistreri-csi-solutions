@@ -94,7 +94,7 @@ func (s *SkipList) getNode(key []byte) (*Node, error) {
 
 	for ; level >= 0; level-- {
 	InnerLoop:
-		for node != nil && node.next[level] != nil {
+		for node != nil && node.next[level] != nil && node.next[level].special != MAX_NODE {
 			switch compareBytes(node.next[level].key, key) {
 			case 0:
 				return node.next[level], nil

@@ -8,7 +8,8 @@ import (
 const MAX_DB_SIZE = 1000
 
 func BenchmarkFillSeqTest(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -17,7 +18,8 @@ func BenchmarkFillSeqTest(b *testing.B) {
 }
 
 func BenchmarkFillRandom(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -26,7 +28,8 @@ func BenchmarkFillRandom(b *testing.B) {
 }
 
 func BenchmarkOverwrite(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	for i := 0; i < MAX_DB_SIZE; i++ {
 		mt.Put(KeyFromIterator(i), v)
@@ -39,7 +42,8 @@ func BenchmarkOverwrite(b *testing.B) {
 }
 
 func BenchmarkDeleteSeq(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
 		mt.Put(KeyFromIterator(i), v)
@@ -51,7 +55,8 @@ func BenchmarkDeleteSeq(b *testing.B) {
 }
 
 func BenchmarkDeleteRandom(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
 		mt.Put(KeyFromIterator(i), v)
@@ -63,7 +68,8 @@ func BenchmarkDeleteRandom(b *testing.B) {
 }
 
 func BenchmarkReadSeq(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
 		mt.Put(KeyFromIterator(i), v)
@@ -75,7 +81,8 @@ func BenchmarkReadSeq(b *testing.B) {
 }
 
 func BenchmarkReadReverse(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
 		mt.Put(KeyFromIterator(i), v)
@@ -87,7 +94,8 @@ func BenchmarkReadReverse(b *testing.B) {
 }
 
 func BenchmarkReadRandom(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
 		mt.Put(KeyFromIterator(i), v)
@@ -99,7 +107,8 @@ func BenchmarkReadRandom(b *testing.B) {
 }
 
 func BenchmarkRangeScanNoIteration(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
 		mt.Put(KeyFromIterator(i), v)
@@ -111,7 +120,8 @@ func BenchmarkRangeScanNoIteration(b *testing.B) {
 }
 
 func BenchmarkRangeScanWithIteration(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	for i := 0; i <= MAX_DB_SIZE; i++ {
 		mt.Put(KeyFromIterator(i), v)
@@ -130,7 +140,8 @@ func BenchmarkRangeScanWithIteration(b *testing.B) {
 }
 
 func BenchmarkRangeAndPut(b *testing.B) {
-	mt := NewMemTable()
+	mt, done := NewMemTable()
+	defer done()
 	v := []byte("World")
 	b.ResetTimer()
 	for i := 0; i < MAX_DB_SIZE; i++ {

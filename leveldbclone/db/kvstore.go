@@ -55,8 +55,25 @@ type KVStore struct {
 	ssTable              *SSTable
 }
 
-func (k *KVStore) Get(key []byte) (value []byte, err error) {
-	return k.memtable.Get(key)
+func (k *KVStore) Get(key []byte) ([]byte, error) {
+	dbs := []ImmutableDB{k.memtable}
+	if k.ssTable != nil {
+		dbs = append(dbs, k.ssTable)
+	}
+	for _, db := range dbs {
+		if db == nil {
+			continue
+		}
+		v, err := db.Get(key)
+		if err != nil {
+			if _, ok := err.(*NotFoundError); ok {
+				continue
+			}
+			return nil, err
+		}
+		return v, nil
+	}
+	return nil, &NotFoundError{}
 }
 
 func (k *KVStore) Has(key []byte) (ret bool, err error) {

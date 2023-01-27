@@ -1,3 +1,4 @@
 .vscode
 *.wal
 *.sst
+__debug_bin

@@ -1,7 +1,6 @@
 package db
 
 import (
-	"encoding/binary"
 	"fmt"
 	"os"
 )
@@ -46,22 +45,6 @@ func (w *WriteAheadLog) Write(key, value []byte) error {
 	return nil
 }
 
-func toLogLine(key, value []byte) []byte {
-	var logLine []byte
-
-	keySize := make([]byte, 4)
-	valueSize := make([]byte, 4)
-	binary.LittleEndian.PutUint32(keySize, uint32(len(key)))
-	binary.LittleEndian.PutUint32(valueSize, uint32(len(value)))
-
-	logLine = append(logLine, keySize...)
-	logLine = append(logLine, valueSize...)
-	logLine = append(logLine, key...)
-	logLine = append(logLine, value...)
-
-	return logLine
-}
-
 func (k *WriteAheadLog) Iterator() (Iterator, error) {
 	// this file remains open as long as the iterator is in the process of being read
 	f, err := os.Open(k.filename)
@@ -94,28 +77,12 @@ func (i *WALIterator) Next() bool {
 		return false
 	}
 
-	// read the sizes of next key and value
-	sizes := make([]byte, 8)
-	n, err := i.file.Read(sizes)
-	if err != nil {
-		i.currErr = err
-		return false
-	}
+	n, key, val, err := readLogLine(i.file)
 	i.position += n
-	keySize := int(binary.LittleEndian.Uint32(sizes[:4]))
-	valueSize := int(binary.LittleEndian.Uint32(sizes[4:]))
-
-	// read the next key and value
-	keyAndValue := make([]byte, keySize+valueSize)
-	n, err = i.file.Read(keyAndValue)
-	if err != nil {
-		i.currErr = err
-		return false
-	}
-	i.position += n
-	i.currKey = keyAndValue[:keySize]
-	i.currValue = keyAndValue[keySize:]
-	return true
+	i.currKey = key
+	i.currValue = val
+	i.currErr = err
+	return err == nil
 }
 
 func (i *WALIterator) Error() error {
