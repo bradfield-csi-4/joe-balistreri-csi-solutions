@@ -127,7 +127,7 @@ func (k *KVStore) flushSSTable(f *os.File) error {
 
 		// append to index
 		if currBytes > SSTABLE_INDEX_INCR_BYTES {
-			index = append(index, IndexEntry{Key: *firstKey, Offset: len(fileContents) - currBytes, Length: currBytes})
+			index = append(index, IndexEntry{Key: *firstKey, Offset: 4 + len(fileContents) - currBytes, Length: currBytes})
 			currBytes = 0
 			firstKey = nil
 		}

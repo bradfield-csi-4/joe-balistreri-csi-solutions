@@ -8,13 +8,13 @@ import (
 )
 
 func TestSSTable(t *testing.T) {
-	t.Run("Has, Put, and Get work as expected", func(t *testing.T) {
+	t.Run("After flushing the Memtable to an SSTable, an early value is found in the SSTable but not in the Memtable", func(t *testing.T) {
 		kv, done := NewKVStore("test")
 		defer done()
 
 		v := []byte("stringbean")
 
-		for i := 0; i < 11; i++ {
+		for i := 0; i < 250; i++ {
 			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
 		}
 
@@ -22,8 +22,8 @@ func TestSSTable(t *testing.T) {
 		So(t, should.BeNil(err))
 		So(t, should.Resemble(string(v), "stringbean10"))
 
-		kv.(*KVStore).memtable.Get(KeyFromIterator(10))
-		So(t, should.NotBeNil(err))
+		v, err = kv.(*KVStore).memtable.Get(KeyFromIterator(10))
 		So(t, should.BeNil(v))
+		So(t, should.NotBeNil(err))
 	})
 }

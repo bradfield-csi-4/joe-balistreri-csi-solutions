@@ -62,9 +62,10 @@ func (s *SSTable) Get(key []byte) (value []byte, err error) {
 	}
 
 	// decode the bytes and see if we can find the value
-	_, currKey, currVal, err := readLogLine(bytes.NewReader(b))
+	bReader := bytes.NewReader(b)
+	_, currKey, currVal, err := readLogLine(bReader)
 	for compareBytes(currKey, key) == -1 && err == nil {
-		_, currKey, currVal, err = readLogLine(bytes.NewReader(b))
+		_, currKey, currVal, err = readLogLine(bReader)
 	}
 	if compareBytes(currKey, key) == 0 {
 		return currVal, nil
@@ -77,7 +78,7 @@ func (s *SSTable) Get(key []byte) (value []byte, err error) {
 
 func (s *SSTable) findIndexEntry(key []byte) *IndexEntry {
 	for i, v := range s.index {
-		if compareBytes(v.Key, key) > 1 { // we've gotten to an index greater than our key
+		if compareBytes(v.Key, key) == 1 { // we've gotten to an index greater than our key
 			if i == 0 {
 				return nil // if we're at the first index entry, every entry is greater than our key
 			}

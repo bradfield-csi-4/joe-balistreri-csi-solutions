@@ -33,9 +33,9 @@ func main() {
 
 	// sl.Print()
 
-	// d, done := db.NewKVStore("example5")
-	d := db.NewSkipList()
-	// defer done()
+	d, done := db.NewKVStore("example1")
+	// d := db.NewSkipList()
+	defer done()
 
 	v := []byte("stringbean")
 
@@ -43,9 +43,7 @@ func main() {
 		d.Put(db.KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
 	}
 
-	d.Print()
-
-	v, err := d.Get(db.KeyFromIterator(498))
+	v, err := d.Get(db.KeyFromIterator(10))
 	fmt.Println(string(v))
 	fmt.Println(err)
 
