@@ -14,8 +14,7 @@ func TestSSTable(t *testing.T) {
 
 		v := []byte("stringbean")
 
-		// using 250 because it's large enough that only 1 sstable is flushed - we'll
-		for i := 0; i < 250; i++ {
+		for i := 0; i < 500; i++ {
 			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
 		}
 
@@ -27,7 +26,7 @@ func TestSSTable(t *testing.T) {
 		So(t, should.BeNil(v))
 		So(t, should.NotBeNil(err))
 
-		for i := 0; i < 250; i++ {
+		for i := 0; i < 500; i++ {
 			v, err := kv.Get(KeyFromIterator(i))
 			So(t, should.BeNil(err))
 			So(t, should.Resemble(string(v), fmt.Sprintf("stringbean%d", i)))
@@ -46,7 +45,7 @@ func TestSSTable(t *testing.T) {
 		So(t, should.BeNil(v))
 		So(t, should.NotBeNil(err))
 
-		for i := 0; i < 250; i++ {
+		for i := 0; i < 500; i++ {
 			v, err := kv2.Get(KeyFromIterator(i))
 			So(t, should.BeNil(err))
 			So(t, should.Resemble(string(v), fmt.Sprintf("stringbean%d", i)))
@@ -120,16 +119,16 @@ func TestSSTable(t *testing.T) {
 		v := []byte("stringbean")
 
 		// only write even values
-		for i := 10; i < 500; i++ {
+		for i := 10; i < 1000; i++ {
 			if i%2 == 0 {
 				kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
 			}
 		}
 
-		for i := 1; i < 520; i++ {
+		for i := 1; i < 1020; i++ {
 			v, err := kv.Get(KeyFromIterator(i))
 			hres, hErr := kv.Has(KeyFromIterator(i))
-			if i%2 == 0 && i >= 10 && i < 500 {
+			if i%2 == 0 && i >= 10 && i < 1000 {
 				So(t, should.BeNil(err))
 				So(t, should.Resemble(string(v), fmt.Sprintf("stringbean%d", i)))
 				So(t, should.BeNil(hErr))
@@ -149,8 +148,7 @@ func TestSSTable(t *testing.T) {
 
 		v := []byte("stringbean")
 
-		// using 250 because it's large enough that only 1 sstable is flushed - we'll
-		for i := 0; i < 250; i++ {
+		for i := 0; i < 500; i++ {
 			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
 		}
 
@@ -159,7 +157,7 @@ func TestSSTable(t *testing.T) {
 			kv.Put(KeyFromIterator(i), append(v2, []byte(strconv.Itoa(i))...))
 		}
 
-		for i := 0; i < 250; i++ {
+		for i := 0; i < 500; i++ {
 			v, err := kv.Get(KeyFromIterator(i))
 			if i >= 20 && i < 40 {
 				So(t, should.BeNil(err))
@@ -170,14 +168,10 @@ func TestSSTable(t *testing.T) {
 			}
 		}
 	})
-	// TODO: do pre-work for thursday's class
-	// - add support for >1 SSTable in KVStore (be able to flush after we hit a certain threshold on memtable)
-	// - handle reads from different sources
-	// - can ignore Delete and RangeScan for now
-
 	// TODO: watch thursday's class
 
 	// TODO: do pre-work for monday's class
+	// - implement Delete and RangeScan for KVStore with multiple SSTables
 
 	// TODO: read bigtable paper
 

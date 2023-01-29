@@ -34,8 +34,9 @@ var NewMemTable = func() (DB, func()) {
 
 func TestMain(m *testing.M) {
 	m.Run()
-	fmt.Println(exec.Command("bash", "-c", "rm *test.wal").Run())
-	fmt.Println(exec.Command("bash", "-c", "rm *test.sst").Run())
+	fmt.Println(exec.Command("bash", "-c", "rm *test*.wal").Run())
+	fmt.Println(exec.Command("bash", "-c", "rm *test*.sst").Run())
+	fmt.Println(exec.Command("bash", "-c", "rm *test*.metadata").Run())
 }
 
 var memtableTypes = []func() (DB, func()){
