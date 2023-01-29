@@ -65,16 +65,20 @@ func TestSSTable(t *testing.T) {
 			}
 		}
 
-		for i := 0; i < 520; i++ {
-			t.Logf("testing %d", i)
+		for i := 1; i < 520; i++ {
 			v, err := kv.Get(KeyFromIterator(i))
+			hres, hErr := kv.Has(KeyFromIterator(i))
 			if i%2 == 0 && i >= 10 && i < 500 {
 				So(t, should.BeNil(err))
 				So(t, should.Resemble(string(v), fmt.Sprintf("stringbean%d", i)))
+				So(t, should.BeNil(hErr))
+				So(t, should.BeTrue(hres))
 			} else {
 				So(t, should.NotBeNil(err))
-				So(t, should.HaveSameTypeAs(err, &NotFoundError{}))
+				So(t, should.Equal(err, ErrNotFound))
 				So(t, should.BeNil(v))
+				So(t, should.Equal(hErr, ErrNotFound))
+				So(t, should.BeFalse(hres))
 			}
 		}
 	})

@@ -22,7 +22,7 @@ func (s *LinkedList) Get(key []byte) (value []byte, err error) {
 		return nil, err
 	}
 	if node == nil || node.value == nil {
-		return nil, &NotFoundError{}
+		return nil, ErrNotFound
 	}
 	return node.value, nil
 }
@@ -49,7 +49,7 @@ func (s *LinkedList) getNode(key []byte) (*LLNode, error) {
 func (s *LinkedList) Has(key []byte) (ret bool, err error) {
 	k, err := s.Get(key)
 	if err != nil {
-		if _, ok := err.(*NotFoundError); ok {
+		if err == ErrNotFound {
 			return false, nil
 		}
 		return false, err

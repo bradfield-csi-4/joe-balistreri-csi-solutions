@@ -43,7 +43,7 @@ func (s *SSTable) Get(key []byte) (value []byte, err error) {
 	// find the correct index entry
 	idx := s.findIndexEntry(key)
 	if idx == nil {
-		return nil, &NotFoundError{}
+		return nil, ErrNotFound
 	}
 	// seek to its start position
 	_, err = s.f.Seek(int64(idx.Offset), 0)
@@ -71,7 +71,7 @@ func (s *SSTable) Get(key []byte) (value []byte, err error) {
 		return currVal, nil
 	}
 	if err == nil || err == io.EOF {
-		return nil, &NotFoundError{}
+		return nil, ErrNotFound
 	}
 	return nil, err
 }
@@ -89,7 +89,11 @@ func (s *SSTable) findIndexEntry(key []byte) *IndexEntry {
 }
 
 func (s *SSTable) Has(key []byte) (ret bool, err error) {
-	return false, nil
+	res, err := s.Get(key)
+	if err != nil {
+		return false, err
+	}
+	return res != nil, nil
 }
 
 func (s *SSTable) RangeScan(start, limit []byte) (Iterator, error) {

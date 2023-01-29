@@ -71,7 +71,7 @@ func (s *SkipList) Get(key []byte) (value []byte, err error) {
 		return nil, err
 	}
 	if node == nil || node.value == nil {
-		return nil, &NotFoundError{}
+		return nil, ErrNotFound
 	}
 	return node.value, nil
 }
@@ -112,9 +112,6 @@ func (s *SkipList) getNode(key []byte) (*Node, error) {
 func (s *SkipList) Has(key []byte) (ret bool, err error) {
 	k, err := s.Get(key)
 	if err != nil {
-		if _, ok := err.(*NotFoundError); ok {
-			return false, nil
-		}
 		return false, err
 	}
 	return k != nil, nil

@@ -76,7 +76,7 @@ func TestMemTable(t *testing.T) {
 
 			v, err = mt.Get([]byte("notinthere"))
 			So(t, should.NotBeNil(err))
-			So(t, should.HaveSameTypeAs(err, &NotFoundError{}))
+			So(t, should.Equal(err, ErrNotFound))
 			So(t, should.BeNil(v))
 		})
 

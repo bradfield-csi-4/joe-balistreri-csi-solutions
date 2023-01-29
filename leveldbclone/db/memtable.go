@@ -20,7 +20,7 @@ func (m *MemTableV1) Get(key []byte) (value []byte, err error) {
 	if ok {
 		return v, nil
 	}
-	return nil, &NotFoundError{}
+	return nil, ErrNotFound
 }
 
 // Has - O(1)
@@ -66,7 +66,7 @@ func (m *MemTableV1) RangeScan(start, limit []byte) (Iterator, error) {
 		values = append(values, pair[1])
 	}
 	return &MemIterator{
-		keys: keys,
+		keys:   keys,
 		values: values,
 	}, nil
 }

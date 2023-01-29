@@ -1,7 +1,5 @@
 package db
 
-type NotFoundError struct{}
+import "errors"
 
-func (m *NotFoundError) Error() string {
-	return "value not found"
-}
+var ErrNotFound = errors.New("NotFound")
