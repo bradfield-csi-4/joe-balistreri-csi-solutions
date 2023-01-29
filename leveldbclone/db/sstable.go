@@ -162,7 +162,7 @@ func (m *SSTableIterator) Next() bool {
 		if compareBytes(key, m.start) == -1 && m.start != nil {
 			continue
 		}
-		if compareBytes(key, m.limit) == 1 && m.limit != nil {
+		if compareBytes(key, m.limit) != -1 && m.limit != nil {
 			m.moreToRead = false
 			return false
 		}

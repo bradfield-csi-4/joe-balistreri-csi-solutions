@@ -52,6 +52,67 @@ func TestSSTable(t *testing.T) {
 			So(t, should.Resemble(string(v), fmt.Sprintf("stringbean%d", i)))
 		}
 	})
+
+	t.Run("RangeScan works for an SSTable", func(t *testing.T) {
+		kv, done := NewKVStore("test")
+		defer done()
+
+		v := []byte("stringbean")
+
+		// using 250 because it's large enough that only 1 sstable is flushed - we'll
+		for i := 0; i < 250; i++ {
+			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
+		}
+
+		// full range
+		it, err := kv.(*KVStore).SSTable.RangeScan(nil, nil)
+		So(t, should.BeNil(err))
+		start, last, count := runIterator(it)
+		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
+		So(t, should.Resemble(last, []byte{0, 0, 0, 247}))
+		So(t, should.Equal(count, 248))
+
+		// restricted start range
+		it, err = kv.(*KVStore).SSTable.RangeScan([]byte{0, 0, 0, 99}, nil)
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(it)
+		So(t, should.Resemble(start, []byte{0, 0, 0, 99}))
+		So(t, should.Resemble(last, []byte{0, 0, 0, 247}))
+		So(t, should.Equal(count, 149))
+
+		// restricted end range
+		it, err = kv.(*KVStore).SSTable.RangeScan(nil, []byte{0, 0, 0, 100})
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(it)
+		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
+		So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
+		So(t, should.Equal(count, 100))
+
+		// restricted start and end range
+		it, err = kv.(*KVStore).SSTable.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 100})
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(it)
+		So(t, should.Resemble(start, []byte{0, 0, 0, 50}))
+		So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
+		So(t, should.Equal(count, 50))
+
+		// empty range
+		it, err = kv.(*KVStore).SSTable.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 50})
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(it)
+		So(t, should.Resemble(start, []byte(nil)))
+		So(t, should.Resemble(last, []byte(nil)))
+		So(t, should.Equal(count, 0))
+
+		// invalid range
+		it, err = kv.(*KVStore).SSTable.RangeScan([]byte{0, 0, 0, 100}, []byte{0, 0, 0, 50})
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(it)
+		So(t, should.Resemble(start, []byte(nil)))
+		So(t, should.Resemble(last, []byte(nil)))
+		So(t, should.Equal(count, 0))
+	})
+
 	t.Run("Correctly handles missing values", func(t *testing.T) {
 		kv, done := NewKVStore("test")
 		defer done()
@@ -109,9 +170,7 @@ func TestSSTable(t *testing.T) {
 			}
 		}
 	})
-	// TODO: implement RangeScan for SSTable
 	// TODO: switch flush to use flush(w io.Writer, it Iterator) - then we can reuse this for compaction with a merged iterator
-	// TODO: use rangescan to read all values (in the test)
 
 	// TODO: do pre-work for thursday's class
 	// - add support for >1 SSTable in KVStore (be able to flush after we hit a certain threshold on memtable)
@@ -134,4 +193,17 @@ func TestSSTable(t *testing.T) {
 	// BONUS: make flush an async operation - can have two memtables during the flush - one taking reads and one frozen
 	// BONUS: how to compress the ssTable files? and still do random io?
 	// BONUS: add the ability to do snapshots
+}
+
+func runIterator(it Iterator) ([]byte, []byte, int) {
+	var start, last []byte
+	var count int
+	for it.Next() {
+		if start == nil {
+			start = it.Key()
+		}
+		last = it.Key()
+		count++
+	}
+	return start, last, count
 }
