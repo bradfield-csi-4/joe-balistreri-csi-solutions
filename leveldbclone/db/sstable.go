@@ -45,24 +45,8 @@ func (s *SSTable) Get(key []byte) (value []byte, err error) {
 	if idx == nil {
 		return nil, ErrNotFound
 	}
-	// seek to its start position
-	_, err = s.f.Seek(int64(idx.Offset), 0)
-	if err != nil {
-		panic(err)
-	}
+	bReader := readSegment(s.f, idx.Offset, idx.Length)
 
-	// read the index into memory
-	b := make([]byte, idx.Length)
-	n, err := s.f.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	if n != idx.Length {
-		panic("read wrong number of bytes")
-	}
-
-	// decode the bytes and see if we can find the value
-	bReader := bytes.NewReader(b)
 	_, currKey, currVal, err := readLogLine(bReader)
 	for compareBytes(currKey, key) == -1 && err == nil {
 		_, currKey, currVal, err = readLogLine(bReader)
@@ -77,15 +61,23 @@ func (s *SSTable) Get(key []byte) (value []byte, err error) {
 }
 
 func (s *SSTable) findIndexEntry(key []byte) *IndexEntry {
+	idx := s.findIndexEntryIdx(key)
+	if idx == -1 {
+		return nil
+	}
+	return &s.index[idx]
+}
+
+func (s *SSTable) findIndexEntryIdx(key []byte) int {
 	for i, v := range s.index {
 		if compareBytes(v.Key, key) == 1 { // we've gotten to an index greater than our key
 			if i == 0 {
-				return nil // if we're at the first index entry, every entry is greater than our key
+				return -1 // if we're at the first index entry, every entry is greater than our key
 			}
-			return &s.index[i-1] // otherwise, return the index before the one that exceeded our key
+			return i - 1 // otherwise, return the index before the one that exceeded our key
 		}
 	}
-	return &s.index[len(s.index)-1] // the start of the last index is less than the key, so we'll search it
+	return len(s.index) - 1 // the start of the last index is less than the key, so we'll search it
 }
 
 func (s *SSTable) Has(key []byte) (ret bool, err error) {
@@ -97,7 +89,120 @@ func (s *SSTable) Has(key []byte) (ret bool, err error) {
 }
 
 func (s *SSTable) RangeScan(start, limit []byte) (Iterator, error) {
-	return nil, nil
+	// find the correct index entry
+	indexIdx := s.findIndexEntryIdx(start)
+	if indexIdx == -1 {
+		indexIdx = 0
+	}
+	idx := s.index[indexIdx]
+
+	f, err := os.Open(s.f.Name())
+	if err != nil {
+		return nil, err
+	}
+
+	return &SSTableIterator{
+		limit:       limit,
+		start:       start,
+		currSegment: readSegment(f, idx.Offset, idx.Length),
+		f:           f,
+		indexes:     s.index,
+		indexIdx:    indexIdx,
+		moreToRead:  true,
+	}, nil
+}
+
+func readSegment(f io.ReadSeeker, offset, length int) io.Reader {
+	_, err := f.Seek(int64(offset), 0)
+	if err != nil {
+		panic(err)
+	}
+
+	// read the index into memory
+	b := make([]byte, length)
+	n, err := f.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	if n != length {
+		panic("read wrong number of bytes")
+	}
+
+	return bytes.NewReader(b)
+}
+
+type SSTableIterator struct {
+	f           *os.File
+	indexes     []IndexEntry
+	indexIdx    int
+	currSegment io.Reader
+	limit       []byte
+	start       []byte
+	moreToRead  bool
+
+	key   []byte
+	value []byte
+	err   error
+}
+
+func (m *SSTableIterator) Next() bool {
+	if !m.moreToRead {
+		m.err = nil
+		m.key = nil
+		m.value = nil
+		return false
+	}
+
+	for ok, key, val, err := m.next(); ok; ok, key, val, err = m.next() {
+		if err != nil {
+			m.err = err
+			m.moreToRead = false
+			return false
+		}
+		if compareBytes(key, m.start) == -1 && m.start != nil {
+			continue
+		}
+		if compareBytes(key, m.limit) == 1 && m.limit != nil {
+			m.moreToRead = false
+			return false
+		}
+		m.key = key
+		m.value = val
+		return true
+	}
+
+	m.moreToRead = false
+	return false
+}
+
+func (m *SSTableIterator) next() (bool, []byte, []byte, error) {
+	_, currKey, currVal, err := readLogLine(m.currSegment)
+	if err == nil {
+		return true, currKey, currVal, nil
+	}
+	if err != io.EOF {
+		return false, nil, nil, err
+	}
+
+	m.indexIdx++
+	if m.indexIdx >= len(m.indexes) {
+		return false, nil, nil, nil
+	}
+	idx := m.indexes[m.indexIdx]
+	m.currSegment = readSegment(m.f, idx.Offset, idx.Length)
+	return m.next()
+}
+
+func (m *SSTableIterator) Error() error {
+	return m.err
+}
+
+func (m *SSTableIterator) Key() []byte {
+	return m.key
+}
+
+func (m *SSTableIterator) Value() []byte {
+	return m.value
 }
 
 func (s *SSTable) Close() {

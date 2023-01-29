@@ -43,9 +43,13 @@ func main() {
 		d.Put(db.KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
 	}
 
-	v, err := d.Get(db.KeyFromIterator(10))
-	fmt.Println(string(v))
+	it, err := d.(*db.KVStore).SSTable.RangeScan(db.KeyFromIterator(30), db.KeyFromIterator(200))
 	fmt.Println(err)
+	fmt.Println(it)
+	it.Next()
+	for i := 0; it.Next() && i < 700; i++ {
+		fmt.Printf("%v: %s\n", it.Key(), strconv.Quote(string(it.Value())))
+	}
 
 	// d.Put([]byte("key2"), []byte("value2"))
 	// d.Put([]byte("key1"), []byte("value3"))

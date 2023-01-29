@@ -27,7 +27,7 @@ func NewKVStore(name string) (DB, func()) {
 	}
 	wal, wDone := NewWriteAheadLog(name + ".wal")
 	store.wal = wal
-	store.ssTable = ssTable
+	store.SSTable = ssTable
 	i, err := store.wal.Iterator()
 	if err != nil {
 		panic(err)
@@ -52,7 +52,7 @@ type KVStore struct {
 	wal                  WriteAheadLog
 	name                 string
 	maxMemtableSizeBytes int
-	ssTable              *SSTable
+	SSTable              *SSTable
 }
 
 func (k *KVStore) Get(key []byte) ([]byte, error) {
@@ -85,8 +85,8 @@ func (k *KVStore) Has(key []byte) (ret bool, err error) {
 
 func (k *KVStore) dbs() []ImmutableDB {
 	dbs := []ImmutableDB{k.memtable}
-	if k.ssTable != nil {
-		dbs = append(dbs, k.ssTable)
+	if k.SSTable != nil {
+		dbs = append(dbs, k.SSTable)
 	}
 	return dbs
 }
@@ -207,7 +207,7 @@ func (k *KVStore) checkAndHandleFlush() error {
 			return err
 		}
 		f.Seek(0, 0)
-		k.ssTable = LoadSSTable(f)
+		k.SSTable = LoadSSTable(f)
 	}
 
 	// clear the writeahead log
@@ -226,7 +226,7 @@ func (k *KVStore) RangeScan(start, limit []byte) (Iterator, error) {
 }
 
 func (k *KVStore) Close() {
-	if k.ssTable != nil {
-		k.ssTable.Close()
+	if k.SSTable != nil {
+		k.SSTable.Close()
 	}
 }

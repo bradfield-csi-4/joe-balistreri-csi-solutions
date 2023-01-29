@@ -109,16 +109,20 @@ func TestSSTable(t *testing.T) {
 			}
 		}
 	})
-	// TODO: implement Has for SSTable and test
 	// TODO: implement RangeScan for SSTable
 	// TODO: switch flush to use flush(w io.Writer, it Iterator) - then we can reuse this for compaction with a merged iterator
 	// TODO: use rangescan to read all values (in the test)
 
-	// TODO: read bigtable paper
-
 	// TODO: do pre-work for thursday's class
+	// - add support for >1 SSTable in KVStore (be able to flush after we hit a certain threshold on memtable)
+	// - handle reads from different sources
+	// - can ignore Delete and RangeScan for now
 
-	// TODO:
+	// TODO: watch thursday's class
+
+	// TODO: do pre-work for monday's class
+
+	// TODO: read bigtable paper
 
 	// TODO: increase the number of values written in the test such that we write multiple ssTables
 	// TODO: flush can write to multiple files if it exceeds the limit of a single SSTable file
@@ -126,6 +130,8 @@ func TestSSTable(t *testing.T) {
 
 	// TODO: leveled compaction - level 0 is temporary; to move down a level, compact an SSTable with all tables it intersects in the subsequent level; each level deeper should have 10x more data
 
+	// BONUS: handle nil value separately from deleted
 	// BONUS: make flush an async operation - can have two memtables during the flush - one taking reads and one frozen
 	// BONUS: how to compress the ssTable files? and still do random io?
+	// BONUS: add the ability to do snapshots
 }
