@@ -132,6 +132,9 @@ func (k *KVStore) flushSSTable(f *os.File) error {
 			firstKey = nil
 		}
 	}
+	if currBytes > 0 {
+		index = append(index, IndexEntry{Key: *firstKey, Offset: 4 + len(fileContents) - currBytes, Length: currBytes})
+	}
 
 	fmt.Printf("index is %+v\n", index)
 	b := &bytes.Buffer{}

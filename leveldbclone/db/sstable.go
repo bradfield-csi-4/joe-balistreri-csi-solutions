@@ -70,10 +70,10 @@ func (s *SSTable) Get(key []byte) (value []byte, err error) {
 	if compareBytes(currKey, key) == 0 {
 		return currVal, nil
 	}
-	if err != nil {
-		return nil, err
+	if err == nil || err == io.EOF {
+		return nil, &NotFoundError{}
 	}
-	return nil, &NotFoundError{}
+	return nil, err
 }
 
 func (s *SSTable) findIndexEntry(key []byte) *IndexEntry {
