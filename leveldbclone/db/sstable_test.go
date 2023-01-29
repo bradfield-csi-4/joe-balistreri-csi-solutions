@@ -65,7 +65,7 @@ func TestSSTable(t *testing.T) {
 		}
 
 		// full range
-		it, err := kv.(*KVStore).SSTable.RangeScan(nil, nil)
+		it, err := kv.(*KVStore).SSTables[0].RangeScan(nil, nil)
 		So(t, should.BeNil(err))
 		start, last, count := runIterator(it)
 		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
@@ -73,7 +73,7 @@ func TestSSTable(t *testing.T) {
 		So(t, should.Equal(count, 248))
 
 		// restricted start range
-		it, err = kv.(*KVStore).SSTable.RangeScan([]byte{0, 0, 0, 99}, nil)
+		it, err = kv.(*KVStore).SSTables[0].RangeScan([]byte{0, 0, 0, 99}, nil)
 		So(t, should.BeNil(err))
 		start, last, count = runIterator(it)
 		So(t, should.Resemble(start, []byte{0, 0, 0, 99}))
@@ -81,7 +81,7 @@ func TestSSTable(t *testing.T) {
 		So(t, should.Equal(count, 149))
 
 		// restricted end range
-		it, err = kv.(*KVStore).SSTable.RangeScan(nil, []byte{0, 0, 0, 100})
+		it, err = kv.(*KVStore).SSTables[0].RangeScan(nil, []byte{0, 0, 0, 100})
 		So(t, should.BeNil(err))
 		start, last, count = runIterator(it)
 		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
@@ -89,7 +89,7 @@ func TestSSTable(t *testing.T) {
 		So(t, should.Equal(count, 100))
 
 		// restricted start and end range
-		it, err = kv.(*KVStore).SSTable.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 100})
+		it, err = kv.(*KVStore).SSTables[0].RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 100})
 		So(t, should.BeNil(err))
 		start, last, count = runIterator(it)
 		So(t, should.Resemble(start, []byte{0, 0, 0, 50}))
@@ -97,7 +97,7 @@ func TestSSTable(t *testing.T) {
 		So(t, should.Equal(count, 50))
 
 		// empty range
-		it, err = kv.(*KVStore).SSTable.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 50})
+		it, err = kv.(*KVStore).SSTables[0].RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 50})
 		So(t, should.BeNil(err))
 		start, last, count = runIterator(it)
 		So(t, should.Resemble(start, []byte(nil)))
@@ -105,7 +105,7 @@ func TestSSTable(t *testing.T) {
 		So(t, should.Equal(count, 0))
 
 		// invalid range
-		it, err = kv.(*KVStore).SSTable.RangeScan([]byte{0, 0, 0, 100}, []byte{0, 0, 0, 50})
+		it, err = kv.(*KVStore).SSTables[0].RangeScan([]byte{0, 0, 0, 100}, []byte{0, 0, 0, 50})
 		So(t, should.BeNil(err))
 		start, last, count = runIterator(it)
 		So(t, should.Resemble(start, []byte(nil)))
@@ -170,8 +170,6 @@ func TestSSTable(t *testing.T) {
 			}
 		}
 	})
-	// TODO: switch flush to use flush(w io.Writer, it Iterator) - then we can reuse this for compaction with a merged iterator
-
 	// TODO: do pre-work for thursday's class
 	// - add support for >1 SSTable in KVStore (be able to flush after we hit a certain threshold on memtable)
 	// - handle reads from different sources

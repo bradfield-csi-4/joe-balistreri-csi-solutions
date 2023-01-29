@@ -5,29 +5,58 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"io"
 	"os"
+	"strconv"
 )
 
 const MAX_MEMTABLE_SIZE_BYTES = 4096 // matches usual OS page size; randomly chosen
 const SSTABLE_INDEX_INCR_BYTES = 400 // 10% of the SSTable size
 
 func NewKVStore(name string) (DB, func()) {
-	store := &KVStore{
-		memtable:             NewSkipList(),
-		name:                 name,
-		maxMemtableSizeBytes: MAX_MEMTABLE_SIZE_BYTES,
-	}
-	var ssTable *SSTable
-	if fileExists(store.ssTableFilename()) {
-		f, err := os.Open(store.ssTableFilename())
+	// load stored ssTable metadata
+
+	metadataFile := metadataFilename(name)
+	metadata := KVStoreMetadata{}
+	if fileExists(metadataFile) {
+		f, err := os.Open(metadataFile)
 		if err != nil {
 			panic(err)
 		}
-		ssTable = LoadSSTable(f)
+		defer f.Close()
+		b, err := io.ReadAll(f)
+		if err != nil {
+			panic(err)
+		}
+		err = gob.NewDecoder(bytes.NewReader(b)).Decode(&metadata)
+		if err != nil {
+			panic(err)
+		}
 	}
+
+	// make the store
+	store := &KVStore{
+		memtable:        NewSkipList(),
+		name:            name,
+		KVStoreMetadata: metadata,
+	}
+
+	// load all SSTables
+	var ssTable *SSTable
+	for i := store.KVStoreMetadata.SSTableIncr; i >= 0; i-- {
+		if fileExists(store.ssTableFilename(i)) {
+			f, err := os.Open(store.ssTableFilename(i))
+			if err != nil {
+				panic(err)
+			}
+			ssTable = LoadSSTable(f)
+			store.SSTables = append(store.SSTables, ssTable)
+		}
+	}
+
+	// load any values from the write-ahead log into the memtable
 	wal, wDone := NewWriteAheadLog(name + ".wal")
 	store.wal = wal
-	store.SSTable = ssTable
 	i, err := store.wal.Iterator()
 	if err != nil {
 		panic(err)
@@ -41,18 +70,28 @@ func NewKVStore(name string) (DB, func()) {
 			store.memtable.Put(k, v)
 		}
 	}
+
+	// return
 	return store, func() {
 		wDone()
 		store.Close()
 	}
 }
 
+func metadataFilename(storeName string) string {
+	return storeName + ".metadata"
+}
+
 type KVStore struct {
-	memtable             *SkipList
-	wal                  WriteAheadLog
-	name                 string
-	maxMemtableSizeBytes int
-	SSTable              *SSTable
+	memtable *SkipList
+	wal      WriteAheadLog
+	name     string
+	KVStoreMetadata
+	SSTables []*SSTable
+}
+
+type KVStoreMetadata struct {
+	SSTableIncr int
 }
 
 func (k *KVStore) Get(key []byte) ([]byte, error) {
@@ -85,8 +124,8 @@ func (k *KVStore) Has(key []byte) (ret bool, err error) {
 
 func (k *KVStore) dbs() []ImmutableDB {
 	dbs := []ImmutableDB{k.memtable}
-	if k.SSTable != nil {
-		dbs = append(dbs, k.SSTable)
+	for _, s := range k.SSTables {
+		dbs = append(dbs, s)
 	}
 	return dbs
 }
@@ -115,24 +154,19 @@ func (k *KVStore) Put(key, value []byte) error {
 	return k.checkAndHandleFlush()
 }
 
-func (k *KVStore) flushSSTable(f *os.File) error {
+func (k *KVStore) flushSSTable(f *os.File, it Iterator) error {
 	var fileContents []byte
-
-	i, err := k.memtable.RangeScan(nil, nil)
-	if err != nil {
-		return err
-	}
 
 	var index []IndexEntry
 	var currBytes int
 	var firstKey *[]byte
-	for i.Next() {
+	for it.Next() {
 		// append to file contents
 		if firstKey == nil {
-			k := i.Key()
+			k := it.Key()
 			firstKey = &k
 		}
-		nextLine := toLogLine(i.Key(), i.Value())
+		nextLine := toLogLine(it.Key(), it.Value())
 		currBytes += len(nextLine)
 		fileContents = append(fileContents, nextLine...)
 
@@ -181,37 +215,62 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func (k *KVStore) ssTableFilename() string {
-	return k.name + ".sst"
+func (k *KVStore) ssTableFilename(i int) string {
+	return k.name + strconv.Itoa(i) + ".sst"
+}
+
+func (k *KVStore) writeMetadata() error {
+	b := &bytes.Buffer{}
+	err := gob.NewEncoder(b).Encode(k.KVStoreMetadata)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(metadataFilename(k.name), os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write(b.Bytes())
+	return err
 }
 
 func (k *KVStore) checkAndHandleFlush() error {
 	// check the size of the memtable
-	if k.memtable.SizeBytes() <= k.maxMemtableSizeBytes {
+	if k.memtable.SizeBytes() <= MAX_MEMTABLE_SIZE_BYTES {
 		return nil
 	}
 	fmt.Printf("memtable is %d bytes large, need to flush\n", k.memtable.SizeBytes())
 
-	if fileExists(k.ssTableFilename()) {
-		fmt.Println("SSTable already exists! Dropping the in memory values for now")
-	} else {
-		// create the SSTable file (and overwrite the old one - will fix that later)
-		f, err := os.OpenFile(k.ssTableFilename(), os.O_CREATE|os.O_RDWR, 0644)
-		if err != nil {
-			return err
-		}
+	// create the SSTable file (and overwrite the old one - will fix that later)
+	f, err := os.OpenFile(k.ssTableFilename(k.KVStoreMetadata.SSTableIncr+1), os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
 
-		// call flush on the memtable
-		err = k.flushSSTable(f)
-		if err != nil {
-			return err
-		}
-		f.Seek(0, 0)
-		k.SSTable = LoadSSTable(f)
+	// call flush on the memtable
+	it, err := k.memtable.RangeScan(nil, nil)
+	if err != nil {
+		return err
+	}
+
+	// add the new SSTable to our list
+	err = k.flushSSTable(f, it)
+	if err != nil {
+		return err
+	}
+	f.Seek(0, 0)
+	k.SSTables = append([]*SSTable{LoadSSTable(f)}, k.SSTables...)
+
+	// update the kvstore metadata
+	k.KVStoreMetadata.SSTableIncr += 1
+	err = k.writeMetadata()
+	if err != nil {
+		return err
 	}
 
 	// clear the writeahead log
-	err := k.wal.Truncate()
+	err = k.wal.Truncate()
 	if err != nil {
 		return err
 	}
@@ -226,7 +285,7 @@ func (k *KVStore) RangeScan(start, limit []byte) (Iterator, error) {
 }
 
 func (k *KVStore) Close() {
-	if k.SSTable != nil {
-		k.SSTable.Close()
+	for _, s := range k.SSTables {
+		s.Close()
 	}
 }

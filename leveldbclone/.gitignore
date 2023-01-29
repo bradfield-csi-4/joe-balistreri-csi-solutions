@@ -1,4 +1,5 @@
 .vscode
 *.wal
 *.sst
+*.metadata
 __debug_bin
