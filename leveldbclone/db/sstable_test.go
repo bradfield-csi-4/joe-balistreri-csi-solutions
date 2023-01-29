@@ -54,7 +54,7 @@ func TestSSTable(t *testing.T) {
 	})
 
 	t.Run("RangeScan works for an SSTable", func(t *testing.T) {
-		kv, done := NewKVStore("test")
+		kv, done := NewKVStore("atest")
 		defer done()
 
 		v := []byte("stringbean")
@@ -114,7 +114,7 @@ func TestSSTable(t *testing.T) {
 	})
 
 	t.Run("Correctly handles missing values", func(t *testing.T) {
-		kv, done := NewKVStore("test")
+		kv, done := NewKVStore("btest")
 		defer done()
 
 		v := []byte("stringbean")
@@ -144,7 +144,7 @@ func TestSSTable(t *testing.T) {
 		}
 	})
 	t.Run("Correctly handles overwrites", func(t *testing.T) {
-		kv, done := NewKVStore("test")
+		kv, done := NewKVStore("ctest")
 		defer done()
 
 		v := []byte("stringbean")

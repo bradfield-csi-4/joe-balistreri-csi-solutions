@@ -67,7 +67,7 @@ func TestSkipList(t *testing.T) {
 		So(t, should.BeNil(err))
 		has, err = sl.Has([]byte("coconut"))
 		So(t, should.BeFalse(has))
-		So(t, should.BeNil(err))
+		So(t, should.Equal(err, ErrNotFound))
 
 		// Delete something that's not there
 		sl.Delete([]byte("apple"))

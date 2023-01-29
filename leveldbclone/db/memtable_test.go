@@ -56,7 +56,7 @@ func TestMemTable(t *testing.T) {
 			mt, done := newMemTable()
 			defer done()
 			has, err := mt.Has([]byte("hello"))
-			So(t, should.BeNil(err))
+			So(t, should.Equal(err, ErrNotFound))
 			So(t, should.BeFalse(has))
 
 			err = mt.Put([]byte("hello"), []byte("world"))
