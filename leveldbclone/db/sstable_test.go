@@ -153,13 +153,13 @@ func TestSSTable(t *testing.T) {
 		}
 
 		v2 := []byte("helloworld")
-		for i := 20; i < 40; i++ {
+		for i := 100; i < 400; i++ {
 			kv.Put(KeyFromIterator(i), append(v2, []byte(strconv.Itoa(i))...))
 		}
 
 		for i := 0; i < 500; i++ {
 			v, err := kv.Get(KeyFromIterator(i))
-			if i >= 20 && i < 40 {
+			if i >= 100 && i < 400 {
 				So(t, should.BeNil(err))
 				So(t, should.Resemble(string(v), fmt.Sprintf("helloworld%d", i)))
 			} else {
