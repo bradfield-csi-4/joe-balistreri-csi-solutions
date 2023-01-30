@@ -281,7 +281,19 @@ func (k *KVStore) checkAndHandleFlush() error {
 }
 
 func (k *KVStore) RangeScan(start, limit []byte) (Iterator, error) {
-	return k.memtable.RangeScan(start, limit)
+	var its []Iterator
+	for _, db := range k.dbs() {
+		it, err := db.RangeScan(start, limit)
+		if err != nil {
+			return nil, err
+		}
+		// initialize each iterator; if it's empty or in error state, drop it
+		if !it.Next() || it.Error() != nil {
+			continue
+		}
+		its = append(its, it)
+	}
+	return &MergedIterator{its: its}, nil
 }
 
 func (k *KVStore) Close() {
