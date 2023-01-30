@@ -117,6 +117,11 @@ type LinkedListIterator struct {
 }
 
 func (m *LinkedListIterator) Next() bool {
+	if m.node != nil && m.node.value != nil && (m.limit != nil && compareBytes(m.node.key, m.limit) != -1) {
+		m.node = nil
+		return false
+	}
+
 	if !m.initialized && m.node != nil {
 		m.initialized = true
 		return true
@@ -131,7 +136,7 @@ func (m *LinkedListIterator) Next() bool {
 		m.node = nil
 		return false
 	}
-	if m.limit != nil && compareBytes(m.node.next.key, m.limit) == 1 {
+	if m.limit != nil && compareBytes(m.node.next.key, m.limit) != -1 {
 		m.node = nil
 		return false
 	}

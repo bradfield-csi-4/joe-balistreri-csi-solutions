@@ -205,6 +205,11 @@ type SkipListIterator struct {
 }
 
 func (m *SkipListIterator) Next() bool {
+	if m.node != nil && m.node.value != nil && (m.limit != nil && compareBytes(m.node.key, m.limit) != -1) {
+		m.node = nil
+		return false
+	}
+
 	if !m.initialized && m.node.value != nil {
 		m.initialized = true
 		return true
@@ -219,7 +224,7 @@ func (m *SkipListIterator) Next() bool {
 		m.node = nil
 		return false
 	}
-	if m.limit != nil && compareBytes(m.node.next[0].key, m.limit) == 1 {
+	if m.limit != nil && compareBytes(m.node.next[0].key, m.limit) != -1 {
 		m.node = nil
 		return false
 	}

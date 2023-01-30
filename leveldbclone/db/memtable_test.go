@@ -30,8 +30,6 @@ var NewMemTable = func() (DB, func()) {
 	return NewKVStore(randSeq(6) + "test")
 }
 
-// var NewMemTable = NewSkipList
-
 func TestMain(m *testing.M) {
 	m.Run()
 	fmt.Println(exec.Command("bash", "-c", "rm *test*.wal").Run())
@@ -132,6 +130,21 @@ func TestMemTable(t *testing.T) {
 			So(t, should.BeFalse(i.Next()))
 
 			So(t, should.BeNil(i.Error()))
+		})
+
+		t.Run("RangeScan excludes the limit value", func(t *testing.T) {
+			mt, done := newMemTable()
+			defer done()
+			mt.Put([]byte("hello"), []byte("world"))
+			mt.Put([]byte("goodbye"), []byte("sky"))
+			mt.Put([]byte("apple"), []byte("juice"))
+
+			i, err := mt.RangeScan([]byte("apple"), []byte("apple"))
+			So(t, should.BeNil(err))
+
+			So(t, should.BeFalse(i.Next()))
+			So(t, should.BeNil(i.Key()))
+			So(t, should.BeNil(i.Value()))
 		})
 
 		t.Run("Delete works properly", func(t *testing.T) {
