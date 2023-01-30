@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/smartystreets/assertions/should"
@@ -66,7 +67,7 @@ func TestSSTable(t *testing.T) {
 		// full range
 		it, err := kv.(*KVStore).SSTables[0].RangeScan(nil, nil)
 		So(t, should.BeNil(err))
-		start, last, count := runIterator(it)
+		start, last, count := runIterator(t, it, func(_ *testing.T, _, _ []byte) {})
 		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
 		So(t, should.Resemble(last, []byte{0, 0, 0, 247}))
 		So(t, should.Equal(count, 248))
@@ -74,7 +75,7 @@ func TestSSTable(t *testing.T) {
 		// restricted start range
 		it, err = kv.(*KVStore).SSTables[0].RangeScan([]byte{0, 0, 0, 99}, nil)
 		So(t, should.BeNil(err))
-		start, last, count = runIterator(it)
+		start, last, count = runIterator(t, it, func(_ *testing.T, _, _ []byte) {})
 		So(t, should.Resemble(start, []byte{0, 0, 0, 99}))
 		So(t, should.Resemble(last, []byte{0, 0, 0, 247}))
 		So(t, should.Equal(count, 149))
@@ -82,7 +83,7 @@ func TestSSTable(t *testing.T) {
 		// restricted end range
 		it, err = kv.(*KVStore).SSTables[0].RangeScan(nil, []byte{0, 0, 0, 100})
 		So(t, should.BeNil(err))
-		start, last, count = runIterator(it)
+		start, last, count = runIterator(t, it, func(_ *testing.T, _, _ []byte) {})
 		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
 		So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
 		So(t, should.Equal(count, 100))
@@ -90,7 +91,7 @@ func TestSSTable(t *testing.T) {
 		// restricted start and end range
 		it, err = kv.(*KVStore).SSTables[0].RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 100})
 		So(t, should.BeNil(err))
-		start, last, count = runIterator(it)
+		start, last, count = runIterator(t, it, func(_ *testing.T, _, _ []byte) {})
 		So(t, should.Resemble(start, []byte{0, 0, 0, 50}))
 		So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
 		So(t, should.Equal(count, 50))
@@ -98,7 +99,7 @@ func TestSSTable(t *testing.T) {
 		// empty range
 		it, err = kv.(*KVStore).SSTables[0].RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 50})
 		So(t, should.BeNil(err))
-		start, last, count = runIterator(it)
+		start, last, count = runIterator(t, it, func(_ *testing.T, _, _ []byte) {})
 		So(t, should.Resemble(start, []byte(nil)))
 		So(t, should.Resemble(last, []byte(nil)))
 		So(t, should.Equal(count, 0))
@@ -106,7 +107,91 @@ func TestSSTable(t *testing.T) {
 		// invalid range
 		it, err = kv.(*KVStore).SSTables[0].RangeScan([]byte{0, 0, 0, 100}, []byte{0, 0, 0, 50})
 		So(t, should.BeNil(err))
-		start, last, count = runIterator(it)
+		start, last, count = runIterator(t, it, func(_ *testing.T, _, _ []byte) {})
+		So(t, should.Resemble(start, []byte(nil)))
+		So(t, should.Resemble(last, []byte(nil)))
+		So(t, should.Equal(count, 0))
+	})
+
+	t.Run("RangeScan works multiple SSTables", func(t *testing.T) {
+		kv, done := NewKVStore("ztest")
+		defer done()
+
+		v := []byte("stringbean")
+		for i := 0; i < 1000; i++ {
+			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
+		}
+
+		v2 := []byte("overwrite")
+		for i := 300; i < 600; i++ {
+			kv.Put(KeyFromIterator(i), append(v2, []byte(strconv.Itoa(i))...))
+		}
+
+		for i := 500; i < 700; i++ {
+			kv.Delete(KeyFromIterator(i))
+		}
+
+		for i := 0; i < 100; i++ {
+			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
+		}
+
+		testResult := func(subT *testing.T, key, val []byte) {
+			subT.Helper()
+			if compareBytes(KeyFromIterator(299), key) == -1 && compareBytes(KeyFromIterator(599), key) == 1 {
+				if !(strings.HasPrefix(string(v), "overwrite")) {
+					panic("fuck")
+				}
+			} else {
+				if !(strings.HasPrefix(string(v), "stringbean")) {
+					panic("me")
+				}
+			}
+		}
+
+		// full range
+		it, err := kv.RangeScan(nil, nil)
+		So(t, should.BeNil(err))
+		start, last, count := runIterator(t, it, testResult)
+		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
+		So(t, should.Resemble(last, []byte{0, 0, 0, 247}))
+		So(t, should.Equal(count, 248))
+
+		// restricted start range
+		it, err = kv.RangeScan([]byte{0, 0, 0, 99}, nil)
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(t, it, testResult)
+		So(t, should.Resemble(start, []byte{0, 0, 0, 99}))
+		So(t, should.Resemble(last, []byte{0, 0, 0, 247}))
+		So(t, should.Equal(count, 149))
+
+		// restricted end range
+		it, err = kv.RangeScan(nil, []byte{0, 0, 0, 100})
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(t, it, testResult)
+		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
+		So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
+		So(t, should.Equal(count, 100))
+
+		// restricted start and end range
+		it, err = kv.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 100})
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(t, it, testResult)
+		So(t, should.Resemble(start, []byte{0, 0, 0, 50}))
+		So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
+		So(t, should.Equal(count, 50))
+
+		// empty range
+		it, err = kv.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 50})
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(t, it, testResult)
+		So(t, should.Resemble(start, []byte(nil)))
+		So(t, should.Resemble(last, []byte(nil)))
+		So(t, should.Equal(count, 0))
+
+		// invalid range
+		it, err = kv.RangeScan([]byte{0, 0, 0, 100}, []byte{0, 0, 0, 50})
+		So(t, should.BeNil(err))
+		start, last, count = runIterator(t, it, testResult)
 		So(t, should.Resemble(start, []byte(nil)))
 		So(t, should.Resemble(last, []byte(nil)))
 		So(t, should.Equal(count, 0))
@@ -196,7 +281,7 @@ func TestSSTable(t *testing.T) {
 		}
 	})
 	// TODO: do pre-work for monday's class
-	// - implement Delete and RangeScan for KVStore with multiple SSTables
+	// - implement RangeScan for KVStore with multiple SSTables
 
 	// TODO: leveled compaction - level 0 is temporary; to move down a level, compact an SSTable with all tables it intersects in the subsequent level; each level deeper should have 10x more data
 
@@ -215,10 +300,12 @@ func TestSSTable(t *testing.T) {
 	// BONUS: replace gob for encoding the index
 }
 
-func runIterator(it Iterator) ([]byte, []byte, int) {
+func runIterator(t *testing.T, it Iterator, checkResult func(*testing.T, []byte, []byte)) ([]byte, []byte, int) {
+	t.Helper()
 	var start, last []byte
 	var count int
 	for it.Next() {
+		// checkResult(t, it.Key(), it.Value())
 		if start == nil {
 			start = it.Key()
 		}

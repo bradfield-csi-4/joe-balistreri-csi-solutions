@@ -97,8 +97,9 @@ func TestMemTable(t *testing.T) {
 			mt.Put([]byte("goodbye"), []byte("sky"))
 			mt.Put([]byte("apple"), []byte("juice"))
 
-			i, err := mt.RangeScan([]byte("a"), []byte("z"))
+			i, err := mt.RangeScan(nil, nil)
 			So(t, should.BeNil(err))
+			So(t, should.BeTrue(i.Next()))
 
 			So(t, should.Equal(string(i.Key()), "apple"))
 			So(t, should.Equal(string(i.Value()), "juice"))
@@ -125,6 +126,7 @@ func TestMemTable(t *testing.T) {
 			i, err := mt.RangeScan([]byte("d"), []byte("h"))
 			So(t, should.BeNil(err))
 
+			So(t, should.BeTrue(i.Next()))
 			So(t, should.Equal(string(i.Key()), "goodbye"))
 			So(t, should.Equal(string(i.Value()), "sky"))
 			So(t, should.BeFalse(i.Next()))
@@ -158,6 +160,7 @@ func TestMemTable(t *testing.T) {
 
 			i, err := mt.RangeScan([]byte("a"), []byte("z"))
 			So(t, should.BeNil(err))
+			So(t, should.BeTrue(i.Next()))
 
 			So(t, should.Equal(string(i.Key()), "apple"))
 			So(t, should.Equal(string(i.Value()), "juice"))

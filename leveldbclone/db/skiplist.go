@@ -189,7 +189,7 @@ func (s *SkipList) SizeBytes() int {
 
 func (s *SkipList) RangeScan(start, limit []byte) (Iterator, error) {
 	if start == nil && limit == nil {
-		return &SkipListIterator{node: s.head[0], limit: nil}, nil
+		return &SkipListIterator{node: s.head[0].next[0], limit: nil}, nil
 	}
 	node, err := s.getStart(start)
 	if err != nil {
@@ -199,11 +199,17 @@ func (s *SkipList) RangeScan(start, limit []byte) (Iterator, error) {
 }
 
 type SkipListIterator struct {
-	node  *Node
-	limit []byte
+	initialized bool
+	node        *Node
+	limit       []byte
 }
 
 func (m *SkipListIterator) Next() bool {
+	if !m.initialized && m.node.value != nil {
+		m.initialized = true
+		return true
+	}
+
 	// skip deleted nodes
 	for m.node != nil && m.node.next[0] != nil && m.node.next[0].value == nil {
 		m.node = m.node.next[0]
@@ -226,14 +232,14 @@ func (m *SkipListIterator) Error() error {
 }
 
 func (m *SkipListIterator) Key() []byte {
-	if m.node == nil {
+	if m.node == nil || !m.initialized {
 		return nil
 	}
 	return m.node.key
 }
 
 func (m *SkipListIterator) Value() []byte {
-	if m.node == nil {
+	if m.node == nil || !m.initialized {
 		return nil
 	}
 	return m.node.value

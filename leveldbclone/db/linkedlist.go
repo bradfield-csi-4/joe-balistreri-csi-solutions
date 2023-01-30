@@ -31,6 +31,9 @@ func (s *LinkedList) Get(key []byte) (value []byte, err error) {
 }
 
 func (s *LinkedList) getStartNode(key []byte) (*LLNode, error) {
+	if key == nil {
+		return s.head, nil
+	}
 	node := s.head
 	for node != nil && compareBytes(node.key, key) == -1 {
 		node = node.next
@@ -108,11 +111,17 @@ func (s *LinkedList) RangeScan(start, limit []byte) (Iterator, error) {
 }
 
 type LinkedListIterator struct {
-	node  *LLNode
-	limit []byte
+	node        *LLNode
+	limit       []byte
+	initialized bool
 }
 
 func (m *LinkedListIterator) Next() bool {
+	if !m.initialized && m.node != nil {
+		m.initialized = true
+		return true
+	}
+
 	// skip deleted nodes
 	for m.node != nil && m.node.next != nil && m.node.next.value == nil {
 		m.node = m.node.next
@@ -122,7 +131,7 @@ func (m *LinkedListIterator) Next() bool {
 		m.node = nil
 		return false
 	}
-	if compareBytes(m.node.next.key, m.limit) == 1 {
+	if m.limit != nil && compareBytes(m.node.next.key, m.limit) == 1 {
 		m.node = nil
 		return false
 	}
@@ -135,14 +144,14 @@ func (m *LinkedListIterator) Error() error {
 }
 
 func (m *LinkedListIterator) Key() []byte {
-	if m.node == nil {
+	if m.node == nil || !m.initialized {
 		return nil
 	}
 	return m.node.key
 }
 
 func (m *LinkedListIterator) Value() []byte {
-	if m.node == nil {
+	if m.node == nil || !m.initialized {
 		return nil
 	}
 	return m.node.value
