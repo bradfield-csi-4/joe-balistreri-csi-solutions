@@ -150,9 +150,6 @@ type SSTableIterator struct {
 
 func (m *SSTableIterator) Next() bool {
 	if !m.moreToRead {
-		m.err = nil
-		m.key = nil
-		m.value = nil
 		return false
 	}
 
@@ -175,6 +172,9 @@ func (m *SSTableIterator) Next() bool {
 	}
 
 	m.moreToRead = false
+	m.err = nil
+	m.key = nil
+	m.value = nil
 	return false
 }
 
