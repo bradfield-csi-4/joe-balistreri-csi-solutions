@@ -173,18 +173,21 @@ func TestSSTable(t *testing.T) {
 	// TODO: do pre-work for monday's class
 	// - implement Delete and RangeScan for KVStore with multiple SSTables
 
+	// TODO: leveled compaction - level 0 is temporary; to move down a level, compact an SSTable with all tables it intersects in the subsequent level; each level deeper should have 10x more data
+
 	// TODO: read bigtable paper
 
 	// TODO: increase the number of values written in the test such that we write multiple ssTables
 	// TODO: flush can write to multiple files if it exceeds the limit of a single SSTable file
 	// TODO: actual limits: 2MB for SSTable file, 2 KB for each chunk in the index
 
-	// TODO: leveled compaction - level 0 is temporary; to move down a level, compact an SSTable with all tables it intersects in the subsequent level; each level deeper should have 10x more data
-
 	// BONUS: handle nil value separately from deleted
 	// BONUS: make flush an async operation - can have two memtables during the flush - one taking reads and one frozen
 	// BONUS: how to compress the ssTable files? and still do random io?
 	// BONUS: add the ability to do snapshots
+	// BONUS: store the largest key in each index entry in order to reduce an extra read; can also add the first and last key in the table so we can avoid scanning a block where we don't have something
+	// BONUS: could move the index length to the back of the file (this lets you start writing the file before you know everything about it)
+	// BONUS: replace gob for encoding the index
 }
 
 func runIterator(it Iterator) ([]byte, []byte, int) {
