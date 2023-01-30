@@ -52,6 +52,9 @@ func (s *SSTable) Get(key []byte) (value []byte, err error) {
 		_, currKey, currVal, err = readLogLine(bReader)
 	}
 	if compareBytes(currKey, key) == 0 {
+		if currVal == nil {
+			return nil, ErrKeyDeleted
+		}
 		return currVal, nil
 	}
 	if err == nil || err == io.EOF {

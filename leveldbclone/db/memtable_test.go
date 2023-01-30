@@ -154,7 +154,7 @@ func TestMemTable(t *testing.T) {
 
 			v, err := mt.Get([]byte("goodbye"))
 			So(t, should.BeNil(v))
-			So(t, should.NotBeNil(err))
+			So(t, should.Equal(err, ErrKeyDeleted))
 
 			i, err := mt.RangeScan([]byte("a"), []byte("z"))
 			So(t, should.BeNil(err))

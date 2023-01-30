@@ -21,8 +21,11 @@ func (s *LinkedList) Get(key []byte) (value []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if node == nil || node.value == nil {
+	if node == nil {
 		return nil, ErrNotFound
+	}
+	if node.value == nil {
+		return nil, ErrKeyDeleted
 	}
 	return node.value, nil
 }

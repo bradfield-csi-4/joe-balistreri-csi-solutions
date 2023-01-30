@@ -168,6 +168,33 @@ func TestSSTable(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("Correctly handles deletes", func(t *testing.T) {
+		kv, done := NewKVStore("dtest")
+		defer done()
+
+		v := []byte("stringbean")
+
+		for i := 0; i < 500; i++ {
+			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
+		}
+
+		for i := 100; i < 400; i++ {
+			kv.Delete(KeyFromIterator(i))
+		}
+
+		for i := 0; i < 500; i++ {
+			if i >= 100 && i < 400 {
+				v, err := kv.Get(KeyFromIterator(i))
+				So(t, should.Equal(err, ErrKeyDeleted))
+				So(t, should.BeNil(v))
+			} else {
+				v, err := kv.Get(KeyFromIterator(i))
+				So(t, should.BeNil(err))
+				So(t, should.Resemble(string(v), fmt.Sprintf("stringbean%d", i)))
+			}
+		}
+	})
 	// TODO: do pre-work for monday's class
 	// - implement Delete and RangeScan for KVStore with multiple SSTables
 

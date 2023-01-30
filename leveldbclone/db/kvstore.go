@@ -101,7 +101,7 @@ func (k *KVStore) Get(key []byte) ([]byte, error) {
 			if err == ErrNotFound {
 				continue
 			}
-			return nil, err
+			return nil, err // Deletes handled by ErrKeyDeleted
 		}
 		return v, nil
 	}

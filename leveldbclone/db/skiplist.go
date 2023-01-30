@@ -70,8 +70,11 @@ func (s *SkipList) Get(key []byte) (value []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if node == nil || node.value == nil {
+	if node == nil {
 		return nil, ErrNotFound
+	}
+	if node.value == nil {
+		return nil, ErrKeyDeleted
 	}
 	return node.value, nil
 }
@@ -123,7 +126,7 @@ func (s *SkipList) Delete(key []byte) error {
 		return err
 	}
 	if node == nil {
-		return nil
+		return s.Put(key, nil)
 	}
 	s.sizeBytes -= len(node.value)
 	node.value = nil
