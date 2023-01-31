@@ -39,6 +39,11 @@ func (m *MergedIterator) Next() bool {
 		return false
 	}
 
+	// if we find a deleted value, recurse
+	if minIterator.Value() == nil {
+		return m.Next()
+	}
+
 	m.currIterator = minIterator
 	m.currKey = minKey
 	m.currValue = minIterator.Value()

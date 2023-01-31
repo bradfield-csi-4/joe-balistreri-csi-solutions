@@ -114,7 +114,7 @@ func TestSSTable(t *testing.T) {
 	})
 
 	t.Run("RangeScan works multiple SSTables", func(t *testing.T) {
-		kv, done := NewKVStore("ztest")
+		kv, done := NewKVStore("zztest")
 		defer done()
 
 		v := []byte("stringbean")
@@ -153,16 +153,16 @@ func TestSSTable(t *testing.T) {
 		So(t, should.BeNil(err))
 		start, last, count := runIterator(t, it, testResult)
 		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
-		So(t, should.Resemble(last, []byte{0, 0, 0, 247}))
-		So(t, should.Equal(count, 248))
+		So(t, should.Resemble(last, KeyFromIterator(999)))
+		So(t, should.Equal(count, 800))
 
 		// restricted start range
 		it, err = kv.RangeScan([]byte{0, 0, 0, 99}, nil)
 		So(t, should.BeNil(err))
 		start, last, count = runIterator(t, it, testResult)
 		So(t, should.Resemble(start, []byte{0, 0, 0, 99}))
-		So(t, should.Resemble(last, []byte{0, 0, 0, 247}))
-		So(t, should.Equal(count, 149))
+		So(t, should.Resemble(last, KeyFromIterator(999)))
+		So(t, should.Equal(count, 700))
 
 		// restricted end range
 		it, err = kv.RangeScan(nil, []byte{0, 0, 0, 100})
@@ -305,6 +305,9 @@ func runIterator(t *testing.T, it Iterator, checkResult func(*testing.T, []byte,
 	var start, last []byte
 	var count int
 	for it.Next() {
+		if compareBytes(it.Key(), []byte{0, 0, 0, 247}) == 0 {
+			fmt.Println("hello")
+		}
 		// checkResult(t, it.Key(), it.Value())
 		if start == nil {
 			start = it.Key()

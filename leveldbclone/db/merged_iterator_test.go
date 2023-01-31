@@ -18,6 +18,7 @@ func TestMergedIterator(t *testing.T) {
 		l1.Put([]byte("a"), []byte("a"))
 		l1.Put([]byte("c"), []byte("c"))
 		l1.Put([]byte("d"), []byte("d"))
+		l1.Put([]byte("e"), nil)
 		it1, _ := l1.RangeScan(nil, nil)
 		So(t, should.BeTrue(it1.Next())) // initialize
 
@@ -55,9 +56,9 @@ func TestMergedIterator(t *testing.T) {
 		So(t, should.Equal(string(m.Key()), "d"))
 		So(t, should.Equal(string(m.Value()), "d"))
 
-		So(t, should.BeTrue(m.Next()))
-		So(t, should.Equal(string(m.Key()), "e"))
-		So(t, should.Equal(string(m.Value()), "E"))
+		// So(t, should.BeTrue(m.Next()))
+		// So(t, should.Equal(string(m.Key()), "e"))
+		// So(t, should.Equal(string(m.Value()), "E"))
 
 		So(t, should.BeTrue(m.Next()))
 		So(t, should.Equal(string(m.Key()), "f"))
