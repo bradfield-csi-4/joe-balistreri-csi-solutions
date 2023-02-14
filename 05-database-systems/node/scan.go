@@ -1,15 +1,37 @@
 package node
 
 import (
+	"bufio"
 	"encoding/csv"
+	"os"
 	"strings"
 )
 
 type ScanNode struct {
-	index       int
-	input       []string
+	reader      *bufio.Reader
 	initialized bool
 	columnNames []string
+}
+
+var tablenameToFilename = map[string]string{
+	"movies":        "data/ml-20m/movies.csv",
+	"ratings":       "data/ml-20m/ratings.csv",
+	"tags":          "data/ml-20m/tags.csv",
+	"links":         "data/ml-20m/links.csv",
+	"genome-scores": "data/ml-20m/genome-scores.csv",
+	"genome-tags":   "data/ml-20m/genome-tags.csv",
+}
+
+func NewScanNode(tablename string) *ScanNode {
+	filename, ok := tablenameToFilename[tablename]
+	if !ok {
+		panic("invalid tablename")
+	}
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	return &ScanNode{reader: bufio.NewReader(f)}
 }
 
 func (s *ScanNode) Next() map[string]string {
@@ -43,10 +65,10 @@ func (s *ScanNode) readCsv(input string) []string {
 }
 
 func (s *ScanNode) read() *string {
-	if s.index >= len(s.input) {
+	line, _, err := s.reader.ReadLine()
+	if err != nil {
 		return nil
 	}
-	res := &s.input[s.index]
-	s.index++
-	return res
+	lString := string(line)
+	return &lString
 }
