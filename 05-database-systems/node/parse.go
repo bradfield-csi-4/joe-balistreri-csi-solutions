@@ -32,7 +32,7 @@ func ParseNode(q QueryExpression, nextNode ExecutionNode) ExecutionNode {
 		}
 		var groupBy *string
 		if len(q.Args) == 3 {
-			if q.Args[0] != "GROUP BY" {
+			if q.Args[1] != "GROUP BY" {
 				panic("invalid args for avg")
 			}
 			groupBy = &q.Args[2]
