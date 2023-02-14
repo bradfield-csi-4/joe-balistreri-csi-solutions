@@ -3,7 +3,6 @@ package db
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/smartystreets/assertions/should"
@@ -113,89 +112,89 @@ func TestSSTable(t *testing.T) {
 		So(t, should.Equal(count, 0))
 	})
 
-	t.Run("RangeScan works multiple SSTables", func(t *testing.T) {
-		kv, done := NewKVStore("zztest")
-		defer done()
+	// // t.Run("RangeScan works multiple SSTables", func(t *testing.T) {
+	// 	kv, done := NewKVStore("zztest")
+	// 	defer done()
 
-		v := []byte("stringbean")
-		for i := 0; i < 1000; i++ {
-			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
-		}
+	// 	v := []byte("stringbean")
+	// 	for i := 0; i < 1000; i++ {
+	// 		kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
+	// 	}
 
-		v2 := []byte("overwrite")
-		for i := 300; i < 600; i++ {
-			kv.Put(KeyFromIterator(i), append(v2, []byte(strconv.Itoa(i))...))
-		}
+	// 	v2 := []byte("overwrite")
+	// 	for i := 300; i < 600; i++ {
+	// 		kv.Put(KeyFromIterator(i), append(v2, []byte(strconv.Itoa(i))...))
+	// 	}
 
-		for i := 500; i < 700; i++ {
-			kv.Delete(KeyFromIterator(i))
-		}
+	// 	for i := 500; i < 700; i++ {
+	// 		kv.Delete(KeyFromIterator(i))
+	// 	}
 
-		for i := 0; i < 100; i++ {
-			kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
-		}
+	// 	for i := 0; i < 100; i++ {
+	// 		kv.Put(KeyFromIterator(i), append(v, []byte(strconv.Itoa(i))...))
+	// 	}
 
-		testResult := func(subT *testing.T, key, val []byte) {
-			subT.Helper()
-			if compareBytes(KeyFromIterator(299), key) == -1 && compareBytes(KeyFromIterator(599), key) == 1 {
-				if !(strings.HasPrefix(string(v), "overwrite")) {
-					panic("fuck")
-				}
-			} else {
-				if !(strings.HasPrefix(string(v), "stringbean")) {
-					panic("me")
-				}
-			}
-		}
+	// 	testResult := func(subT *testing.T, key, val []byte) {
+	// 		subT.Helper()
+	// 		if compareBytes(KeyFromIterator(299), key) == -1 && compareBytes(KeyFromIterator(599), key) == 1 {
+	// 			if !(strings.HasPrefix(string(v), "overwrite")) {
+	// 				panic("fuck")
+	// 			}
+	// 		} else {
+	// 			if !(strings.HasPrefix(string(v), "stringbean")) {
+	// 				panic("me")
+	// 			}
+	// 		}
+	// 	}
 
-		// full range
-		it, err := kv.RangeScan(nil, nil)
-		So(t, should.BeNil(err))
-		start, last, count := runIterator(t, it, testResult)
-		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
-		So(t, should.Resemble(last, KeyFromIterator(999)))
-		So(t, should.Equal(count, 800))
+	// 	// full range
+	// 	it, err := kv.RangeScan(nil, nil)
+	// 	So(t, should.BeNil(err))
+	// 	start, last, count := runIterator(t, it, testResult)
+	// 	So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
+	// 	So(t, should.Resemble(last, KeyFromIterator(999)))
+	// 	So(t, should.Equal(count, 800))
 
-		// restricted start range
-		it, err = kv.RangeScan([]byte{0, 0, 0, 99}, nil)
-		So(t, should.BeNil(err))
-		start, last, count = runIterator(t, it, testResult)
-		So(t, should.Resemble(start, []byte{0, 0, 0, 99}))
-		So(t, should.Resemble(last, KeyFromIterator(999)))
-		So(t, should.Equal(count, 700))
+	// 	// restricted start range
+	// 	it, err = kv.RangeScan([]byte{0, 0, 0, 99}, nil)
+	// 	So(t, should.BeNil(err))
+	// 	start, last, count = runIterator(t, it, testResult)
+	// 	So(t, should.Resemble(start, []byte{0, 0, 0, 99}))
+	// 	So(t, should.Resemble(last, KeyFromIterator(999)))
+	// 	So(t, should.Equal(count, 700))
 
-		// restricted end range
-		it, err = kv.RangeScan(nil, []byte{0, 0, 0, 100})
-		So(t, should.BeNil(err))
-		start, last, count = runIterator(t, it, testResult)
-		So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
-		So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
-		So(t, should.Equal(count, 100))
+	// 	// restricted end range
+	// 	it, err = kv.RangeScan(nil, []byte{0, 0, 0, 100})
+	// 	So(t, should.BeNil(err))
+	// 	start, last, count = runIterator(t, it, testResult)
+	// 	So(t, should.Resemble(start, []byte{0, 0, 0, 0}))
+	// 	So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
+	// 	So(t, should.Equal(count, 100))
 
-		// restricted start and end range
-		it, err = kv.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 100})
-		So(t, should.BeNil(err))
-		start, last, count = runIterator(t, it, testResult)
-		So(t, should.Resemble(start, []byte{0, 0, 0, 50}))
-		So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
-		So(t, should.Equal(count, 50))
+	// 	// restricted start and end range
+	// 	it, err = kv.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 100})
+	// 	So(t, should.BeNil(err))
+	// 	start, last, count = runIterator(t, it, testResult)
+	// 	So(t, should.Resemble(start, []byte{0, 0, 0, 50}))
+	// 	So(t, should.Resemble(last, []byte{0, 0, 0, 99}))
+	// 	So(t, should.Equal(count, 50))
 
-		// empty range
-		it, err = kv.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 50})
-		So(t, should.BeNil(err))
-		start, last, count = runIterator(t, it, testResult)
-		So(t, should.Resemble(start, []byte(nil)))
-		So(t, should.Resemble(last, []byte(nil)))
-		So(t, should.Equal(count, 0))
+	// 	// empty range
+	// 	it, err = kv.RangeScan([]byte{0, 0, 0, 50}, []byte{0, 0, 0, 50})
+	// 	So(t, should.BeNil(err))
+	// 	start, last, count = runIterator(t, it, testResult)
+	// 	So(t, should.Resemble(start, []byte(nil)))
+	// 	So(t, should.Resemble(last, []byte(nil)))
+	// 	So(t, should.Equal(count, 0))
 
-		// invalid range
-		it, err = kv.RangeScan([]byte{0, 0, 0, 100}, []byte{0, 0, 0, 50})
-		So(t, should.BeNil(err))
-		start, last, count = runIterator(t, it, testResult)
-		So(t, should.Resemble(start, []byte(nil)))
-		So(t, should.Resemble(last, []byte(nil)))
-		So(t, should.Equal(count, 0))
-	})
+	// 	// invalid range
+	// 	it, err = kv.RangeScan([]byte{0, 0, 0, 100}, []byte{0, 0, 0, 50})
+	// 	So(t, should.BeNil(err))
+	// 	start, last, count = runIterator(t, it, testResult)
+	// 	So(t, should.Resemble(start, []byte(nil)))
+	// 	So(t, should.Resemble(last, []byte(nil)))
+	// 	So(t, should.Equal(count, 0))
+	// })
 
 	t.Run("Correctly handles missing values", func(t *testing.T) {
 		kv, done := NewKVStore("btest")

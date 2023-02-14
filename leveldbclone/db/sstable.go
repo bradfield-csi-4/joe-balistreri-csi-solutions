@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"io"
 	"os"
+	"sort"
 )
 
 func LoadSSTable(f *os.File) *SSTable {
@@ -72,15 +73,10 @@ func (s *SSTable) findIndexEntry(key []byte) *IndexEntry {
 }
 
 func (s *SSTable) findIndexEntryIdx(key []byte) int {
-	for i, v := range s.index {
-		if compareBytes(v.Key, key) == 1 { // we've gotten to an index greater than our key
-			if i == 0 {
-				return -1 // if we're at the first index entry, every entry is greater than our key
-			}
-			return i - 1 // otherwise, return the index before the one that exceeded our key
-		}
-	}
-	return len(s.index) - 1 // the start of the last index is less than the key, so we'll search it
+	i := sort.Search(len(s.index), func(i int) bool {
+		return compareBytes(s.index[i].Key, key) == 1
+	})
+	return i - 1 // otherwise, return the index before the one that exceeded our key
 }
 
 func (s *SSTable) Has(key []byte) (ret bool, err error) {
