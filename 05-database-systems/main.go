@@ -18,9 +18,16 @@ func main() {
 		{Name: "SCAN", Args: []string{"movies"}},
 	}
 
+	query3 := []node.QueryExpression{
+		{Name: "COUNT"},
+		// {Name: "DISTINCT", Args: []string{"movieId"}},
+		{Name: "SCAN", Args: []string{"ratings"}},
+	}
+
 	for i, query := range [][]node.QueryExpression{
 		query1,
 		query2,
+		query3,
 	} {
 		fmt.Printf("Query %d\n", i+1)
 		readAll(parseQuery(query))
