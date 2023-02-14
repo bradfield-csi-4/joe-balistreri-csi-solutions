@@ -14,7 +14,7 @@ func NewDistinctNode(field string, underlying ExecutionNode) *DistinctNode {
 	}
 }
 
-func (s *DistinctNode) Next() map[string]string {
+func (s *DistinctNode) Next() Row {
 	curr := s.underlying.Next()
 	if curr == nil {
 		return nil

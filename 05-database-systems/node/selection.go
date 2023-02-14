@@ -30,7 +30,7 @@ func NewSelectionNode(field, operation, value string, underlying ExecutionNode) 
 	}
 }
 
-func (s *SelectionNode) Next() map[string]string {
+func (s *SelectionNode) Next() Row {
 	curr := s.underlying.Next()
 	for len(curr) != 0 {
 		v, ok := curr[s.field]

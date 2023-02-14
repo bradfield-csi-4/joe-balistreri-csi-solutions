@@ -4,7 +4,7 @@ type Groupable struct {
 	groupBy *string
 }
 
-func (s *Groupable) groupByValue(curr map[string]string) string {
+func (s *Groupable) groupByValue(curr Row) string {
 	if s.groupBy == nil {
 		return "total"
 	}
@@ -13,4 +13,11 @@ func (s *Groupable) groupByValue(curr map[string]string) string {
 		panic("invalid groupBy in count node")
 	}
 	return groupByValue
+}
+
+func (s *Groupable) groupByField() string {
+	if s.groupBy == nil {
+		return "total"
+	}
+	return *s.groupBy
 }

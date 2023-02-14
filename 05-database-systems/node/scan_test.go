@@ -8,7 +8,7 @@ import (
 
 func TestScan(t *testing.T) {
 	t.Run("benchmark for scanning ratings", func(t *testing.T) {
-		tablenameToFilename = map[string]string{
+		tablenameToFilename = Row{
 			"movies":  "../data/ml-20m/movies.csv",
 			"ratings": "../data/ml-20m/ratings.csv",
 		}

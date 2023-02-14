@@ -17,12 +17,12 @@ func NewProjectionNode(fields []string, underlying ExecutionNode) *ProjectionNod
 	}
 }
 
-func (s *ProjectionNode) Next() map[string]string {
+func (s *ProjectionNode) Next() Row {
 	curr := s.underlying.Next()
 	if curr == nil {
 		return nil
 	}
-	result := map[string]string{}
+	result := Row{}
 	for _, f := range s.fields {
 		result[f] = curr[f]
 	}

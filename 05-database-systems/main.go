@@ -25,6 +25,8 @@ func main() {
 	// }
 
 	query4 := []node.QueryExpression{
+		{Name: "LIMIT", Args: []string{"10"}},
+		{Name: "SORT", Args: []string{"avg(rating)", "DESC"}},
 		{Name: "AVG", Args: []string{"rating", "GROUP BY", "movieId"}},
 		{Name: "SCAN", Args: []string{"ratings"}},
 	}

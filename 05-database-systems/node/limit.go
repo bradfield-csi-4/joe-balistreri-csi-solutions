@@ -19,7 +19,7 @@ func NewLimitNode(limit string, underlying ExecutionNode) *LimitNode {
 	}
 }
 
-func (s *LimitNode) Next() map[string]string {
+func (s *LimitNode) Next() Row {
 	if s.currCount >= s.limit {
 		return nil
 	}
@@ -27,6 +27,6 @@ func (s *LimitNode) Next() map[string]string {
 	if curr == nil {
 		return nil
 	}
-	s.currCount += 1
+	s.currCount++
 	return curr
 }

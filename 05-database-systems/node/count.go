@@ -18,17 +18,17 @@ func NewCountNode(underlying ExecutionNode, groupBy *string) *CountNode {
 	return res
 }
 
-func (s *CountNode) Next() map[string]string {
+func (s *CountNode) Next() Row {
 	if s.returned {
 		return nil
 	}
 	for curr := s.underlying.Next(); curr != nil; curr = s.underlying.Next() {
 		groupByValue := s.groupByValue(curr)
-		s.currCounts[groupByValue] += 1
+		s.currCounts[groupByValue]++
 	}
 	s.returned = true
 
-	result := map[string]string{}
+	result := Row{}
 
 	for k, v := range s.currCounts {
 		result[k] = strconv.Itoa(v)
