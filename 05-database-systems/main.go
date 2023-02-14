@@ -20,7 +20,7 @@ func main() {
 
 	query3 := []node.QueryExpression{
 		{Name: "COUNT"},
-		// {Name: "DISTINCT", Args: []string{"movieId"}},
+		{Name: "DISTINCT", Args: []string{"movieId"}},
 		{Name: "SCAN", Args: []string{"ratings"}},
 	}
 

@@ -12,6 +12,11 @@ func ParseNode(q QueryExpression, nextNode ExecutionNode) ExecutionNode {
 			panic("invalid args for limit node")
 		}
 		return NewLimitNode(q.Args[0], nextNode)
+	case "DISTINCT":
+		if len(q.Args) != 1 {
+			panic("invalid args for distinct node")
+		}
+		return NewDistinctNode(q.Args[0], nextNode)
 	case "COUNT":
 		return NewCountNode(nextNode)
 	case "SELECTION":
