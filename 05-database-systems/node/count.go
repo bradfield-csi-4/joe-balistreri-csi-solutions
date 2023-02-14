@@ -3,24 +3,36 @@ package node
 import "strconv"
 
 type CountNode struct {
-	currCount  int
+	Groupable
+	currCounts map[string]int
 	returned   bool
 	underlying ExecutionNode
 }
 
-func NewCountNode(underlying ExecutionNode) *CountNode {
-	return &CountNode{
+func NewCountNode(underlying ExecutionNode, groupBy *string) *CountNode {
+	res := &CountNode{
+		Groupable:  Groupable{groupBy: groupBy},
 		underlying: underlying,
+		currCounts: map[string]int{},
 	}
+	return res
 }
 
 func (s *CountNode) Next() map[string]string {
 	if s.returned {
 		return nil
 	}
-	for s.underlying.Next() != nil {
-		s.currCount += 1
+	for curr := s.underlying.Next(); curr != nil; curr = s.underlying.Next() {
+		groupByValue := s.groupByValue(curr)
+		s.currCounts[groupByValue] += 1
 	}
 	s.returned = true
-	return map[string]string{"count": strconv.Itoa(s.currCount)}
+
+	result := map[string]string{}
+
+	for k, v := range s.currCounts {
+		result[k] = strconv.Itoa(v)
+	}
+
+	return result
 }

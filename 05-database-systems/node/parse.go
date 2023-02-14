@@ -18,7 +18,26 @@ func ParseNode(q QueryExpression, nextNode ExecutionNode) ExecutionNode {
 		}
 		return NewDistinctNode(q.Args[0], nextNode)
 	case "COUNT":
-		return NewCountNode(nextNode)
+		var field *string
+		if len(q.Args) == 2 {
+			if q.Args[0] != "GROUP BY" {
+				panic("invalid args for count")
+			}
+			field = &q.Args[1]
+		}
+		return NewCountNode(nextNode, field)
+	case "AVG":
+		if len(q.Args) == 0 {
+			panic("invalid args for avg")
+		}
+		var groupBy *string
+		if len(q.Args) == 3 {
+			if q.Args[0] != "GROUP BY" {
+				panic("invalid args for avg")
+			}
+			groupBy = &q.Args[2]
+		}
+		return NewAvgNode(nextNode, q.Args[0], groupBy)
 	case "SELECTION":
 		if len(q.Args) != 3 {
 			panic("invalid args for selection node")
