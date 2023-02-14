@@ -8,13 +8,13 @@ import (
 
 func main() {
 	query := []node.QueryExpression{
-		{Name: "PROJECTION", Args: []string{"name"}},
-		{Name: "SELECTION", Args: []string{"id", "EQUALS", "5000"}},
+		{Name: "PROJECTION", Args: []string{"title", "movieId"}},
+		{Name: "SELECTION", Args: []string{"movieId", "EQUALS", "8"}},
 		{Name: "SCAN", Args: []string{"movies"}},
 	}
 
 	var rootNode node.ExecutionNode
-	for i := len(query) - 1; i > 0; i-- {
+	for i := len(query) - 1; i >= 0; i-- {
 		rootNode = node.ParseNode(query[i], rootNode)
 	}
 
