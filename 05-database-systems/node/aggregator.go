@@ -5,6 +5,8 @@ import (
 	"strconv"
 )
 
+const TOTAL = "__total"
+
 type AggregatorNode struct {
 	AggOptions
 	underlying  ExecutionNode
@@ -81,10 +83,11 @@ func (c *CountAggregator) Results() map[string]Row {
 	valueName := "count"
 	groupName := groupByField(c.groupBy)
 	for k, c := range c.currCounts {
-		results[k] = Row{
-			groupName: k,
-			valueName: strconv.Itoa(c),
+		row := Row{valueName: strconv.Itoa(c)}
+		if k != TOTAL {
+			row[groupName] = k
 		}
+		results[k] = row
 	}
 	return results
 }
@@ -132,10 +135,11 @@ func (a *AvgAggregator) Results() map[string]Row {
 			value = t
 		}
 
-		results[k] = Row{
-			groupName: k,
-			valueName: strconv.FormatFloat(value, 'f', -1, 64),
+		row := Row{valueName: strconv.FormatFloat(value, 'f', -1, 64)}
+		if k != TOTAL {
+			row[groupName] = k
 		}
+		results[k] = row
 	}
 	return results
 }
@@ -154,7 +158,7 @@ func NewAvgAggregator(field string, groupBy *string, useSum bool) *AvgAggregator
 
 func groupByValue(curr Row, groupBy *string) string {
 	if groupBy == nil {
-		return "total"
+		return TOTAL
 	}
 	groupByValue, ok := curr[*groupBy]
 	if !ok {
@@ -165,7 +169,7 @@ func groupByValue(curr Row, groupBy *string) string {
 
 func groupByField(groupBy *string) string {
 	if groupBy == nil {
-		return "total"
+		return TOTAL
 	}
 	return *groupBy
 }

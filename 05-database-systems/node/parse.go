@@ -26,27 +26,35 @@ func ParseNode(q QueryExpression, nextNode ExecutionNode) ExecutionNode {
 			panic("invalid args for distinct node")
 		}
 		return NewDistinctNode(q.Args[0], nextNode)
-	case "COUNT":
-		var field *string
-		if len(q.Args) == 2 {
-			if q.Args[0] != "GROUP BY" {
-				panic("invalid args for count")
-			}
-			field = &q.Args[1]
-		}
-		return NewAggregatorNode(nextNode, AggOptions{Aggregators: []Aggregator{NewCountAggregator(field)}})
-	case "AVG":
+	case "AGG":
 		if len(q.Args) == 0 {
-			panic("invalid args for avg")
+			panic("invalid args for agg")
 		}
 		var groupBy *string
-		if len(q.Args) == 3 {
-			if q.Args[1] != "GROUP BY" {
-				panic("invalid args for avg")
+		if len(q.Args) >= 3 {
+			if q.Args[len(q.Args)-2] == "GROUP BY" {
+				groupBy = &q.Args[len(q.Args)-1]
 			}
-			groupBy = &q.Args[2]
 		}
-		return NewAggregatorNode(nextNode, AggOptions{Aggregators: []Aggregator{NewAvgAggregator(q.Args[0], groupBy, false)}})
+		var aggs []Aggregator
+	Loop:
+		for i := 0; i < len(q.Args); {
+			switch q.Args[i] {
+			case "COUNT":
+				aggs = append(aggs, NewCountAggregator(groupBy))
+				i++
+			case "AVG":
+				aggs = append(aggs, NewAvgAggregator(q.Args[i+1], groupBy, false))
+				i += 2
+			case "SUM":
+				aggs = append(aggs, NewAvgAggregator(q.Args[i+1], groupBy, true))
+				i += 2
+			default:
+				break Loop
+			}
+		}
+
+		return NewAggregatorNode(nextNode, AggOptions{Aggregators: aggs})
 	case "SELECTION":
 		if len(q.Args) != 3 {
 			panic("invalid args for selection node")

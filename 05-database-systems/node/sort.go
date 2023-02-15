@@ -2,6 +2,7 @@ package node
 
 import (
 	"sort"
+	"strconv"
 )
 
 type SortNode struct {
@@ -27,11 +28,25 @@ func (s *SortNode) Next() Row {
 			s.sorted = append(s.sorted, curr)
 		}
 		sortFunc := func(i, j int) bool {
-			return s.sorted[i][s.sortBy] < s.sorted[j][s.sortBy]
+			a := s.sorted[i][s.sortBy]
+			b := s.sorted[j][s.sortBy]
+			af, aerr := strconv.ParseFloat(a, 64)
+			bf, berr := strconv.ParseFloat(b, 64)
+			if aerr == nil && berr == nil {
+				return af < bf
+			}
+			return a < b
 		}
 		if s.desc {
 			sortFunc = func(i, j int) bool {
-				return s.sorted[i][s.sortBy] > s.sorted[j][s.sortBy]
+				a := s.sorted[i][s.sortBy]
+				b := s.sorted[j][s.sortBy]
+				af, aerr := strconv.ParseFloat(a, 64)
+				bf, berr := strconv.ParseFloat(b, 64)
+				if aerr == nil && berr == nil {
+					return af > bf
+				}
+				return a > b
 			}
 		}
 		sort.SliceStable(s.sorted, sortFunc)
