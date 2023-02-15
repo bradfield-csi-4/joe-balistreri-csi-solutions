@@ -34,7 +34,7 @@ func ParseNode(q QueryExpression, nextNode ExecutionNode) ExecutionNode {
 			}
 			field = &q.Args[1]
 		}
-		return NewCountNode(nextNode, field)
+		return NewAggregatorNode(nextNode, AggOptions{Aggregators: []Aggregator{NewCountAggregator(field)}})
 	case "AVG":
 		if len(q.Args) == 0 {
 			panic("invalid args for avg")
@@ -46,7 +46,7 @@ func ParseNode(q QueryExpression, nextNode ExecutionNode) ExecutionNode {
 			}
 			groupBy = &q.Args[2]
 		}
-		return NewAvgNode(nextNode, q.Args[0], groupBy)
+		return NewAggregatorNode(nextNode, AggOptions{Aggregators: []Aggregator{NewAvgAggregator(q.Args[0], groupBy, false)}})
 	case "SELECTION":
 		if len(q.Args) != 3 {
 			panic("invalid args for selection node")

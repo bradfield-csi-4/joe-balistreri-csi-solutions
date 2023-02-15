@@ -2,6 +2,7 @@ package node
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/csv"
 	"os"
 	"strings"
@@ -20,6 +21,10 @@ var tablenameToFilename = Row{
 	"links":         "data/ml-20m/links.csv",
 	"genome-scores": "data/ml-20m/genome-scores.csv",
 	"genome-tags":   "data/ml-20m/genome-tags.csv",
+}
+
+func NewTestScanNode(lines []string) *ScanNode {
+	return &ScanNode{reader: bufio.NewReader(bytes.NewReader([]byte(strings.Join(lines, "\n"))))}
 }
 
 func NewScanNode(tablename string) *ScanNode {
