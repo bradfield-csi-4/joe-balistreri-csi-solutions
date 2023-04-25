@@ -1,6 +1,7 @@
 package node
 
 type ProjectionNode struct {
+	ColumnNameParser
 	fields     []string
 	underlying ExecutionNode
 }
@@ -18,13 +19,23 @@ func NewProjectionNode(fields []string, underlying ExecutionNode) *ProjectionNod
 }
 
 func (s *ProjectionNode) Next() Row {
+	if !s.initialized {
+		columns := s.underlying.Next()
+		s.AddColumns(columns)
+		return s.selection(columns)
+	}
+
 	curr := s.underlying.Next()
 	if curr == nil {
 		return nil
 	}
+	return s.selection(curr)
+}
+
+func (s *ProjectionNode) selection(row Row) Row {
 	result := Row{}
-	for _, f := range s.fields {
-		result[f] = curr[f]
+	for _, v := range s.fields {
+		result = append(result, row[s.columnsToIndex[v]])
 	}
 	return result
 }

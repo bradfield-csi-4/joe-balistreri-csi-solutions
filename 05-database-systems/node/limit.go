@@ -20,7 +20,7 @@ func NewLimitNode(limit string, underlying ExecutionNode) *LimitNode {
 }
 
 func (s *LimitNode) Next() Row {
-	if s.currCount >= s.limit {
+	if s.currCount > s.limit {
 		return nil
 	}
 	curr := s.underlying.Next()

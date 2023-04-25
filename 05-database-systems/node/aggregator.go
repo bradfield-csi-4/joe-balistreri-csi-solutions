@@ -1,9 +1,6 @@
 package node
 
-import (
-	"fmt"
-	"strconv"
-)
+import "strconv"
 
 const TOTAL = "__total"
 
@@ -63,7 +60,7 @@ func (s *AggregatorNode) Next() Row {
 
 type Aggregator interface {
 	Add(Row)
-	Results() map[string]Row
+	Results() map[string]map[string]string
 }
 
 // COUNT AGGREGATOR
@@ -78,12 +75,12 @@ func (c *CountAggregator) Add(row Row) {
 	c.currCounts[groupByValue]++
 }
 
-func (c *CountAggregator) Results() map[string]Row {
-	results := map[string]Row{}
+func (c *CountAggregator) Results() map[string]map[string]string {
+	results := map[string]map[string]string{}
 	valueName := "count"
 	groupName := groupByField(c.groupBy)
 	for k, c := range c.currCounts {
-		row := Row{valueName: strconv.Itoa(c)}
+		row := map[string]string{valueName: strconv.Itoa(c)}
 		if k != TOTAL {
 			row[groupName] = k
 		}
@@ -107,41 +104,43 @@ type AvgAggregator struct {
 }
 
 func (c *AvgAggregator) Add(row Row) {
-	groupByValue := groupByValue(row, c.groupBy)
-	c.currCounts[groupByValue]++
+	return
+	// groupByValue := groupByValue(row, c.groupBy)
+	// c.currCounts[groupByValue]++
 
-	fieldValue, err := strconv.ParseFloat(row[c.field], 64)
-	if err != nil {
-		panic(err)
-	}
-	c.currTotals[groupByValue] += fieldValue
+	// fieldValue, err := strconv.ParseFloat(row[c.field], 64)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// c.currTotals[groupByValue] += fieldValue
 }
 
 func (a *AvgAggregator) Results() map[string]Row {
-	results := map[string]Row{}
-	valueName := fmt.Sprintf("avg(%s)", a.field)
-	if a.useSum {
-		valueName = fmt.Sprintf("sum(%s)", a.field)
-	}
-	groupName := groupByField(a.groupBy)
+	return nil
+	// results := map[string]Row{}
+	// valueName := fmt.Sprintf("avg(%s)", a.field)
+	// if a.useSum {
+	// 	valueName = fmt.Sprintf("sum(%s)", a.field)
+	// }
+	// groupName := groupByField(a.groupBy)
 
-	for k, c := range a.currCounts {
-		t := a.currTotals[k]
-		avg := t / float64(c)
+	// for k, c := range a.currCounts {
+	// 	t := a.currTotals[k]
+	// 	avg := t / float64(c)
 
-		// handle sum vs avg
-		value := avg
-		if a.useSum {
-			value = t
-		}
+	// 	// handle sum vs avg
+	// 	value := avg
+	// 	if a.useSum {
+	// 		value = t
+	// 	}
 
-		row := Row{valueName: strconv.FormatFloat(value, 'f', -1, 64)}
-		if k != TOTAL {
-			row[groupName] = k
-		}
-		results[k] = row
-	}
-	return results
+	// 	row := Row{valueName: strconv.FormatFloat(value, 'f', -1, 64)}
+	// 	if k != TOTAL {
+	// 		row[groupName] = k
+	// 	}
+	// 	results[k] = row
+	// }
+	// return results
 }
 
 func NewAvgAggregator(field string, groupBy *string, useSum bool) *AvgAggregator {
@@ -157,14 +156,15 @@ func NewAvgAggregator(field string, groupBy *string, useSum bool) *AvgAggregator
 // HELPERS
 
 func groupByValue(curr Row, groupBy *string) string {
-	if groupBy == nil {
-		return TOTAL
-	}
-	groupByValue, ok := curr[*groupBy]
-	if !ok {
-		panic("invalid groupBy in count node")
-	}
-	return groupByValue
+	return ""
+	// if groupBy == nil {
+	// 	return TOTAL
+	// }
+	// groupByValue, ok := curr[*groupBy]
+	// if !ok {
+	// 	panic("invalid groupBy in count node")
+	// }
+	// return groupByValue
 }
 
 func groupByField(groupBy *string) string {

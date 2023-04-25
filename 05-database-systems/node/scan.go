@@ -11,10 +11,9 @@ import (
 type ScanNode struct {
 	reader      *bufio.Reader
 	initialized bool
-	columnNames []string
 }
 
-var tablenameToFilename = Row{
+var tablenameToFilename = map[string]string{
 	"movies":        "data/ml-20m/movies.csv",
 	"ratings":       "data/ml-20m/ratings.csv",
 	"tags":          "data/ml-20m/tags.csv",
@@ -40,25 +39,11 @@ func NewScanNode(tablename string) *ScanNode {
 }
 
 func (s *ScanNode) Next() Row {
-	if !s.initialized {
-		header := s.read()
-		if header == nil {
-			return nil
-		}
-		s.columnNames = s.readCsv(*header)
-		s.initialized = true
-	}
-
 	nextData := s.read()
 	if nextData == nil {
 		return nil
 	}
-	result := Row{}
-	csvData := s.readCsv(*nextData)
-	for i := range csvData {
-		result[s.columnNames[i]] = csvData[i]
-	}
-	return result
+	return s.readCsv(*nextData)
 }
 
 func (s *ScanNode) readCsv(input string) []string {

@@ -1,8 +1,7 @@
 package node
 
-import "fmt"
-
 type SelectionNode struct {
+	ColumnNameParser
 	field      string
 	operation  string
 	value      string
@@ -31,13 +30,16 @@ func NewSelectionNode(field, operation, value string, underlying ExecutionNode) 
 }
 
 func (s *SelectionNode) Next() Row {
+	if !s.initialized {
+		columns := s.underlying.Next()
+		s.AddColumns(columns)
+		return columns
+	}
+
 	curr := s.underlying.Next()
+	fieldI := s.columnsToIndex[s.field]
 	for len(curr) != 0 {
-		v, ok := curr[s.field]
-		if !ok {
-			panic(fmt.Sprintf("invalid row, missing field %s", s.field))
-		}
-		if v == s.value {
+		if curr[fieldI] == s.value {
 			return curr
 		}
 		curr = s.underlying.Next()

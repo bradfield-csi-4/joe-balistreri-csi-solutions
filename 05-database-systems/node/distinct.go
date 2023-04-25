@@ -1,6 +1,7 @@
 package node
 
 type DistinctNode struct {
+	ColumnNameParser
 	field      string
 	seen       map[string]bool
 	underlying ExecutionNode
@@ -15,18 +16,24 @@ func NewDistinctNode(field string, underlying ExecutionNode) *DistinctNode {
 }
 
 func (s *DistinctNode) Next() Row {
+	if !s.initialized {
+		columns := s.underlying.Next()
+		s.AddColumns(columns)
+		return columns
+	}
+
 	curr := s.underlying.Next()
 	if curr == nil {
 		return nil
 	}
 
-	v, ok := curr[s.field]
-	for !ok || s.seen[v] {
+	v := curr[s.columnsToIndex[s.field]]
+	for s.seen[v] {
 		curr := s.underlying.Next()
 		if curr == nil {
 			return nil
 		}
-		v, ok = curr[s.field]
+		v = curr[s.columnsToIndex[s.field]]
 	}
 
 	s.seen[v] = true
