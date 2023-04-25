@@ -3,3 +3,4 @@
 my_ls
 .DS_Store
 .idea/
+*.db
