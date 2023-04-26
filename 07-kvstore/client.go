@@ -6,6 +6,8 @@ import (
 	"io"
 	"net"
 	"os"
+
+	"github.com/jdbalistreri/bradfield-csi-solutions/07-kvstore/encoding"
 )
 
 const sockAddr = "/tmp/db.sock"
@@ -22,7 +24,15 @@ func main() {
 			panic(err)
 		}
 
-		_, err = conn.Write(scanner.Bytes())
+		cmdString := scanner.Bytes()
+		cmd, err := encoding.CommandFromString(string(cmdString))
+		if err != nil {
+			fmt.Println(err)
+			fmt.Print("> ")
+			continue
+		}
+
+		_, err = conn.Write(cmd.ToBinaryV1())
 		if err != nil {
 			panic(err)
 		}
@@ -35,7 +45,14 @@ func main() {
 				panic(err)
 			}
 		} else {
-			fmt.Println(string(b[:n]))
+			respCmd, err := encoding.CommandFromBinary(b[:n])
+			if err != nil {
+				panic(err)
+			}
+			if respCmd.Op != encoding.MSG {
+				panic("wrong op returned!")
+			}
+			fmt.Println(string(respCmd.Value))
 		}
 
 		fmt.Print("> ")

@@ -3,38 +3,22 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"os/signal"
-	"regexp"
-	"strings"
 	"syscall"
+
+	"github.com/jdbalistreri/bradfield-csi-solutions/07-kvstore/encoding"
 )
 
 const NEWLINE = '\n'
 const FILENAME = "abc.db"
 const sockAddr = "/tmp/db.sock"
 
-var r = regexp.MustCompile("^(get|GET|set|SET) ([a-zA-Z0-9]+)(?:=(.+))?$")
-
 // TODO: make this DB concurrency safe!!!
-type DB map[string]string
-
-type OP int
-
-const (
-	GET OP = iota + 1
-	SET
-)
-
-type Command struct {
-	op    OP
-	key   string
-	value string
-}
+type DB map[string][]byte
 
 func main() {
 
@@ -70,9 +54,13 @@ func main() {
 				panic(err)
 			}
 
-			output := handleCommand(db, string(buf[:n]))
+			output := handleCommand(db, buf[:n])
+			cmd := encoding.Command{
+				Op:    encoding.MSG,
+				Value: output,
+			}
 
-			_, err = conn.Write([]byte(output))
+			_, err = conn.Write(cmd.ToBinaryV1())
 			if err != nil {
 				panic(err)
 			}
@@ -80,24 +68,24 @@ func main() {
 	}
 }
 
-func handleCommand(db DB, command string) string {
-	cmd, err := commandFromString(command)
+func handleCommand(db DB, command []byte) []byte {
+	cmd, err := encoding.CommandFromBinary(command)
 	if err != nil {
-		return err.Error()
+		return []byte(err.Error())
 	}
 
-	switch cmd.op {
-	case GET:
-		return db[cmd.key]
-	case SET:
-		db[cmd.key] = cmd.value
+	switch cmd.Op {
+	case encoding.GET:
+		return db[string(cmd.Key)]
+	case encoding.SET:
+		db[string(cmd.Key)] = cmd.Value
 		// TODO: may want to do this less often for improve performance - on exit?
 		writeDb(FILENAME, db)
 
-		return fmt.Sprintf("%s=%s", cmd.key, cmd.value)
+		return []byte(fmt.Sprintf("%s=%s", cmd.Key, cmd.Value))
 	}
 
-	return "unexpected error"
+	return []byte("unexpected error")
 }
 
 func writeDb(filename string, db DB) error {
@@ -135,31 +123,4 @@ func loadDb(filename string) DB {
 	}
 
 	return db
-}
-
-func commandFromString(s string) (*Command, error) {
-	parts := r.FindStringSubmatch(s)
-	if len(parts) != 4 {
-		return nil, errors.New("invalid input")
-	}
-
-	cmd := Command{
-		key: parts[2],
-	}
-
-	op := strings.ToLower(parts[1])
-	switch op {
-	case "get":
-		cmd.op = GET
-		if parts[3] != "" {
-			return nil, errors.New("cannot set a value with GET")
-		}
-	case "set":
-		cmd.op = SET
-		cmd.value = parts[3]
-	default:
-		return nil, fmt.Errorf("invalid command %s", op)
-	}
-
-	return &cmd, nil
 }
